@@ -1,0 +1,32 @@
+#pg-lost{--g:#2cff4f;--r:#ff3b2f;background:#000;border-radius:14px;padding:14px;color:var(--g);font-family:"Courier New",monospace}
+#pg-lost .ptop h1{color:var(--g);text-shadow:0 0 8px var(--g)}
+.ls-clock{display:flex;justify-content:center;align-items:center;gap:14px;margin:8px auto 22px;padding:14px 16px;width:max-content;max-width:100%;border:3px solid #1c0f06;border-radius:4px;background:linear-gradient(#5a3a1c,#3a2410 60%,#2a190a);box-shadow:0 0 0 2px #0a0502,inset 0 0 12px #000,0 6px 20px rgba(0,0,0,.8)}
+.ls-grp{display:flex;gap:4px;padding:5px;background:#120a04;border-radius:3px;box-shadow:inset 0 0 8px #000}.ls-sep{display:none}
+.ls-d{width:clamp(28px,8.5vw,52px);height:clamp(46px,13vw,80px);background:linear-gradient(#3b3b3b 50%,#1c1c1c 50%);border-radius:4px;color:#e4e4e4;font:700 clamp(28px,8.5vw,58px)/clamp(46px,13vw,80px) Arial,sans-serif;text-align:center;position:relative;transform-origin:50% 50%;box-shadow:inset 0 1px 2px rgba(255,255,255,.2)}
+#ls-s .ls-d{background:linear-gradient(#c9c9c9 50%,#a9a9a9 50%);color:#141414}
+.ls-d::after{content:"";position:absolute;left:0;right:0;top:50%;height:2px;background:rgba(0,0,0,.85)}
+.ls-d.flp{animation:lsflip .45s ease-out}
+@keyframes lsflip{0%{transform:rotateX(-90deg);opacity:.3}100%{transform:rotateX(0);opacity:1}}
+.ls-clock.warn #ls-m .ls-d{color:#ffb020}
+.ls-clock.crit #ls-m .ls-d{color:var(--r);animation:lspulse 1s infinite}
+@keyframes lspulse{50%{box-shadow:0 0 16px var(--r);filter:brightness(1.4)}}
+.ls-clock.fail{background:linear-gradient(#5a1410,#2a0705)}
+.ls-clock.fail .ls-d{color:var(--r);animation:lsglitch .15s infinite}
+@keyframes lsglitch{0%{transform:translate(0)}50%{transform:translate(2px,-1px)}100%{transform:translate(-2px,1px)}}
+.ls-pc{margin:0 auto;width:min(580px,100%)}
+.ls-body{display:flex;gap:10px;align-items:stretch;background:linear-gradient(#f1e3c6,#d9c7a2 70%,#c4b18c);border-radius:22px 22px 6px 6px;padding:18px;box-shadow:inset 0 0 18px rgba(120,90,40,.45),0 10px 26px #000}
+.ls-scr{flex:1;min-height:230px;background:#031a06;border:10px solid #6e655a;border-radius:26px 30px 24px 28px/22px 24px 30px 26px;padding:14px;font-size:.95rem;line-height:1.55;color:var(--g);text-shadow:0 0 6px var(--g);box-shadow:inset 0 0 50px #000,inset 0 0 0 3px #2c2823;position:relative;overflow:hidden}
+.ls-scr::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(transparent 0 2px,rgba(0,0,0,.25) 2px 3px);pointer-events:none}
+.ls-scr.fail{color:var(--r);text-shadow:0 0 8px var(--r)}
+.ls-cur{display:inline-block;width:9px;height:15px;background:currentColor;vertical-align:-2px;animation:lsb 1s steps(1) infinite}@keyframes lsb{50%{opacity:0}}
+.ls-side{width:clamp(70px,22%,120px);background:linear-gradient(#8b7f73,#6d6359);border-radius:6px;padding:10px 8px;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:flex-end;box-shadow:inset 0 0 10px rgba(0,0,0,.5)}
+.ls-vent{width:100%;height:34px;border-radius:5px;background:repeating-linear-gradient(#2a2623 0 3px,#8b7f73 3px 7px);border:2px solid #3b3631}
+.ls-ctl{display:flex;gap:12px;align-items:center;justify-content:center;padding:10px 4px;background:#5a5048;border-radius:5px;width:100%}
+.ls-knob{width:18px;height:18px;border-radius:50%;background:radial-gradient(#777,#222);display:block}
+.ls-led{width:11px;height:11px;border-radius:50%;background:#ff1d0f;box-shadow:0 0 10px #ff1d0f;display:block}
+.ls-sw{width:12px;height:30px;background:linear-gradient(#111,#444);border-radius:3px;display:block}
+.ls-key{margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.ls-btn{font:700 1.05rem "Courier New",monospace;padding:14px 22px;border-radius:8px;border:2px solid #000;background:#1d1d1d;color:var(--g);cursor:pointer;text-shadow:0 0 6px var(--g)}
+.ls-btn:hover{background:#2b2b2b}.ls-btn.ex{background:#7a1410;color:#ffd7d2;text-shadow:none;font-size:1.25rem;flex:1 1 100%}.ls-btn:disabled{opacity:.4;cursor:default}
+.ls-st{width:100%;background:#031a06;border:2px solid #3b3631;border-radius:5px;padding:6px 4px;color:var(--g);text-shadow:0 0 5px var(--g);font:700 .62rem/1.3 "Courier New",monospace;text-align:center}.ls-st b{display:block;font-size:1.15rem;margin-bottom:5px}.ls-st b:last-child{margin-bottom:0}
+.ls-info{text-align:center;margin:12px 0 0;font-size:.85rem;opacity:.85}
