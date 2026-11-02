@@ -279,11 +279,11 @@ function renderDD(){
   if(r.t==='s'){
    const m=Math.round((r.b-r.a)/6e4),unp=!!r.q[2]||off,span=fmt(r.b)!==k?` · termina em ${br(fmt(r.b))}`:'',at=`data-sid="${s.id}" data-ma="${+r.a}" data-mb="${+r.b}"`;
    return`<div class="hrow ddr" style="--c:${s.color}"><div class="hh2"><b>${esc(s.name)}${s.arch?' (arquivada)':''}</b><span class="est">${r.q[3]?'⏱ Cronômetro':'🕒 Registro com horário'}${span}</span></div>
-   <div class="ddf"><label>Início<input type="time" data-dd="st" ${at} value="${hm(r.a)}"></label><label>Duração (min)<input type="number" min="1" max="1440" data-dd="du" ${at} value="${m}"></label><label>Tipo<select data-dd="pl" ${at}${off?' disabled':''}><option value="1"${unp?'':' selected'}>Planejada</option><option value="0"${unp?' selected':''}>Não planejada</option></select></label></div>
+   <div class="ddf"><label>Início<input type="time" data-dd="st" ${at} value="${hm(r.a)}"></label><label>Duração (min)<input type="number" min="1" max="1440" data-dd="du" ${at} value="${m}"></label><label>Tipo<select data-dd="pl" ${at}${off?' disabled':''}><option value="1"${unp?'':' selected'}>Planejada</option><option value="0"${unp?' selected':''}>Não planejada</option></select></label><button class="ghost danger" data-dd="delsess" ${at} aria-label="Excluir bloco">🗑 Excluir</button></div>
    ${off?'<div class="sub" style="margin:2px 0 0;font-size:.8rem">Matéria fora do plano neste dia: conta sempre como não planejada.</div>':''}${lgH(lgs(s,r.a.getHours()))}</div>`}
   const unp=off||(r.res>0&&r.ru>=r.res-.5),mix=!off&&r.ru>.5&&r.ru<r.res-.5,at=`data-sid="${s.id}"`;
   return`<div class="hrow ddr" style="--c:${s.color}"><div class="hh2"><b>${esc(s.name)}${s.arch?' (arquivada)':''}</b><span class="est">✍️ Registro manual (sem horário)</span></div>
-  <div class="ddf"><label>Tempo (min)<input type="number" min="0" max="1440" data-dd="rm" ${at} value="${Math.round(r.res)}"></label><label>Tipo<select data-dd="rp" ${at}${off?' disabled':''}><option value="1"${unp||mix?'':' selected'}>Planejada</option><option value="0"${unp&&!mix?' selected':''}>Não planejada</option>${mix?`<option value="" selected disabled>Misto (${Math.round(r.ru)} min fora do plano)</option>`:''}</select></label></div>
+  <div class="ddf"><label>Tempo (min)<input type="number" min="0" max="1440" data-dd="rm" ${at} value="${Math.round(r.res)}"></label><label>Tipo<select data-dd="rp" ${at}${off?' disabled':''}><option value="1"${unp||mix?'':' selected'}>Planejada</option><option value="0"${unp&&!mix?' selected':''}>Não planejada</option>${mix?`<option value="" selected disabled>Misto (${Math.round(r.ru)} min fora do plano)</option>`:''}</select></label><button class="ghost danger" data-dd="delman" ${at} aria-label="Excluir registro">🗑 Excluir</button></div>
   ${lgH(lgs(s,null))}</div>`}).join('');
  const TR=T.map(({s,x})=>{
   const at=`data-sid="${s.id}" data-tid="${x.id}"`,pb=x.exam?'📝 Prova':x.date?'📅 Planejada'+(x.date!==k?' para '+br(x.date):'')+(x.time?' às '+x.time:''):'Avulsa (sem data planejada)';
@@ -296,8 +296,23 @@ function renderDD(){
  <div class='hs' style='margin-top:10px'>${R||''}${TR||''}${!R&&!TR?'<p class="sub">Nada registrado neste dia.</p>':''}</div>`}
 document.addEventListener('click',e=>{const b=e.target.closest('button[data-dd]');if(!b||b.disabled)return;const a=b.dataset.dd;
  if(a==='nav'){const v=+b.dataset.v,t=fmt(now());ddK=v===0?t:fmt(addD(parse(ddK||t),v));if(ddK>t)ddK=t;renderDD()}
- else if(a==='reopen'){const s=S.subjects.find(x=>x.id===b.dataset.sid),x=s&&(s.topics||[]).find(y=>y.id===b.dataset.tid);if(!x)return;setDone(s,x,false);save();render();toast('Tarefa reaberta.')}});
-document.addEventListener('change',e=>{const el=e.target,a=el.dataset&&el.dataset.dd;if(!a||a==='nav'||a==='reopen')return;
+ else if(a==='reopen'){const s=S.subjects.find(x=>x.id===b.dataset.sid),x=s&&(s.topics||[]).find(y=>y.id===b.dataset.tid);if(!x)return;setDone(s,x,false);save();render();toast('Tarefa reaberta.')}
+ else if(a==='delsess'){const s=S.subjects.find(x=>x.id===b.dataset.sid);if(!s)return;const ma=+b.dataset.ma,mb=+b.dataset.mb,q=(s.sessions||[]).find(x=>+new Date(x[0])===ma&&+new Date(x[1])===mb);if(!q){toast('Sessão não encontrada.');render();return}
+  const a0=new Date(ma),b0=new Date(mb),dur=Math.round((mb-ma)/6e4);
+  if(!confirm('Excluir este bloco de '+s.name+' ('+hh(dur)+')?\n\nO tempo sai do dia e lazer, Elos, XP e streak são recalculados.'))return;
+  const r=lzRefundSess(s,q),unp=!!q[2];s.du=s.du||{};
+  sessParts(a0,b0).forEach(([d,m])=>{s.days[d]=Math.max(0,(s.days[d]||0)-Math.round(m));if(unp)s.du[d]=Math.max(0,(s.du[d]||0)-Math.round(m))});
+  Object.keys(s.days).forEach(d=>{if(!(s.days[d]>0))delete s.days[d]});
+  Object.keys(s.du).forEach(d=>{if(!(d in s.days)||s.du[d]>s.days[d])s.du[d]=s.days[d]||0;if(!s.du[d])delete s.du[d]});
+  s.sessions=s.sessions.filter(x=>x!==q);
+  const L=(S.log||[]).filter(x=>x.sid===s.id&&x.d===fmt(a0)&&x.h===a0.getHours());if(L.length){const g=L.reduce((p,x)=>Math.abs(x.m-dur)<Math.abs(p.m-dur)?x:p);S.log=S.log.filter(x=>x!==g)}
+  save();render();toast('Bloco excluído.'+(r?' Lazer e Elos estornados ('+lzS(-r.lz).replace('+','−')+').':''))}
+ else if(a==='delman'){const s=S.subjects.find(x=>x.id===b.dataset.sid);if(!s)return;const k=ddK,sd=ddSessDay(s,k),cur=Math.max(0,(s.days[k]||0)-sd.tot);
+  if(!confirm('Excluir o registro manual de '+s.name+' ('+hh(cur)+') neste dia?\n\nO tempo sai do dia e lazer, Elos, XP e streak são recalculados.'))return;
+  const r=lzRefundManual(s,k);s.days[k]=sd.tot;s.du=s.du||{};const du=Math.min(s.days[k],sd.unp);if(du>0)s.du[k]=du;else delete s.du[k];if(!(s.days[k]>0)){delete s.days[k];delete s.du[k]}
+  S.log=(S.log||[]).filter(x=>!(x.sid===s.id&&x.d===k&&x.h==null));
+  save();render();toast('Registro excluído.'+(r?' Lazer e Elos estornados.':''))}});
+document.addEventListener('change',e=>{const el=e.target,a=el.dataset&&el.dataset.dd;if(!a||a==='nav'||a==='reopen'||a==='delsess'||a==='delman')return;
  if(a==='date'){const t=fmt(now());ddK=el.value&&el.value<=t?el.value:t;renderDD();return}
  const s=S.subjects.find(x=>x.id===el.dataset.sid);if(!s)return;const k=ddK,row=el.closest('.ddr');
  if(a==='st'||a==='du'||a==='pl'){
@@ -315,7 +330,7 @@ document.addEventListener('change',e=>{const el=e.target,a=el.dataset&&el.datase
   if(!hhmm||!(dur>=1&&dur<=1440)){toast('Informe início e duração válidos (1 a 1440 min).');render();return}
   const na=new Date(fmt(a0)+'T'+hhmm+':00'),nb=new Date(+na+dur*6e4);
   if(isNaN(na)||nb>new Date()){toast('Esse bloco terminaria no futuro. Ajuste o início ou a duração.');render();return}
-  const oldP=sessParts(a0,b0),newP=sessParts(na,nb),unp=!!q[2];s.du=s.du||{};
+  const oldDur=Math.round((mb-ma)/6e4),rf=dur!==oldDur?lzRefundSess(s,q):null,oldP=sessParts(a0,b0),newP=sessParts(na,nb),unp=!!q[2];s.du=s.du||{};
   oldP.forEach(([d,m])=>{s.days[d]=Math.max(0,(s.days[d]||0)-Math.round(m));if(unp)s.du[d]=Math.max(0,(s.du[d]||0)-Math.round(m))});
   newP.forEach(([d,m])=>{s.days[d]=(s.days[d]||0)+Math.round(m);if(unp)s.du[d]=(s.du[d]||0)+Math.round(m)});
   oldP.forEach(([d])=>{if(!(s.days[d]>0)&&!newP.some(p=>p[0]===d)){delete s.days[d];if(s.du)delete s.du[d]}});
@@ -323,13 +338,17 @@ document.addEventListener('change',e=>{const el=e.target,a=el.dataset&&el.datase
   const L=(S.log||[]).filter(x=>x.sid===s.id&&x.d===fmt(a0)&&x.h===a0.getHours());
   if(L.length===1){const x=L[0];x.d=fmt(na);x.h=na.getHours();x.m=dur;if(x.xb>0)x.xb=xbCalc(dur)}
   q[0]=iso(na);q[1]=iso(nb);
+  if(rf&&!unp&&impAt(s,fmt(na))!==0){const nid=q[3]?lzGain(s,dur,'timer'):lzGainD(s,dur,'manual',fmt(na),true),ne=nid&&lzCfg().led.find(x=>x.id===nid);if(ne&&q[3])q[3]=ne.t;if(nid&&rf.bonus)lzBonus(nid)}
   save();render();toast(fmt(na)!==k?'Sessão movida para '+br(fmt(na))+'.':'Sessão atualizada.');return}
  if(a==='rm'||a==='rp'){
   const sd=ddSessDay(s,k),cur=Math.max(0,(s.days[k]||0)-sd.tot),curU=Math.max(0,Math.min(cur,((s.du&&s.du[k])||0)-sd.unp));let nr=cur,nu=curU;
   if(a==='rm'){nr=Math.max(0,Math.round(+el.value||0));nu=cur>0?(curU>=cur-.5?nr:Math.min(nr,Math.round(curU))):0}
   else{if(el.value==='')return;nu=el.value==='1'?0:cur}
+  const rm=a==='rm'&&nr!==cur?lzRefundManual(s,k):null;
   s.days[k]=sd.tot+nr;s.du=s.du||{};const du=Math.min(s.days[k],sd.unp+nu);if(du>0)s.du[k]=du;else delete s.du[k];
-  save();render();toast('Registro atualizado.');return}
+  if(!(s.days[k]>0)){delete s.days[k];delete s.du[k];S.log=(S.log||[]).filter(x=>!(x.sid===s.id&&x.d===k&&x.h==null))}
+  if(rm){const pm=Math.max(0,nr-nu);if(pm>0&&impAt(s,k)!==0)lzGainD(s,pm,'manual',k,false)}
+  save();render();toast('Registro atualizado.'+(rm?' Lazer e Elos recalculados.':''));return}
  if(a==='tm'){
   const x=(s.topics||[]).find(y=>y.id===el.dataset.tid);if(!x)return;
   const old=x.est||0,nv=Math.max(0,Math.min(1440,Math.round(+el.value||0))),sd=ddSessDay(s,k);x.est=nv;if(x.dur&&nv>0)x.dur=Math.max(SNAP,nv);
