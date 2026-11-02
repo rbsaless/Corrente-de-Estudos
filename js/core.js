@@ -36,7 +36,7 @@ function regDay(s,k,m,tm){
  while(fmt(c)<fmt(b)){const n=new Date(c.getFullYear(),c.getMonth(),c.getDate()+1);ad(c,(n-c)/6e4);c=n}
  if(b>c)ad(c,(b-c)/6e4);
  return''}
-function clearDay(s,k){delete s.days[k];S.log=(S.log||[]).filter(x=>!(x.sid===s.id&&x.d===k));if(s.sessions)s.sessions=s.sessions.filter(x=>x[0].slice(0,10)!==k)}
+function clearDay(s,k){try{lzRefundDay(s,k)}catch(e){console.error(e)}delete s.days[k];if(s.du)delete s.du[k];S.log=(S.log||[]).filter(x=>!(x.sid===s.id&&x.d===k));if(s.sessions)s.sessions=s.sessions.filter(x=>x[0].slice(0,10)!==k)}
 function ago(s){const k=Object.keys(s.days).sort().pop();return k?diff(k,fmt(now())):null}
 const agoTxt=s=>{const a=ago(s);return a==null?'Nunca estudado':a===0?'Estudado hoje':`Estudado há ${a} dia${pl(a)}`};
 
