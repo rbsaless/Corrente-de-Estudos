@@ -31,11 +31,11 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-a="dsopen"
  if(a==='dsopen'){dsOpen=!dsOpen;render();return}
  if(a==='dsq'){const i=$('#ds-m');if(i)i.value=b.dataset.v;return}
  if(a==='dsdel'){const s=S.subjects.find(x=>x.id===b.dataset.id);if(!s)return;const m=s.days[calSel]||0,n=SS(s).filter(x=>fmt(x.a)===calSel).length;
-  if(!confirm('Desmarcar '+s.name+' em '+br(calSel)+'?\n\nSerão apagados: '+(m?hh(m):'o registro')+', '+n+' bloco'+pl(n)+' com horário e as anotações do dia.\nLazer e Elos já creditados não são desfeitos.'))return;
+  if(!confirm('Desmarcar '+s.name+' em '+br(calSel)+'?\n\nSerão apagados: '+(m?hh(m):'o registro')+', '+n+' bloco'+pl(n)+' com horário e as anotações do dia.\nLazer e Elos creditados por esse estudo serão estornados.'))return;
   clearDay(s,calSel);save();render();toast('Registro de '+br(calSel)+' removido.');return}
  if(a==='dsreg'){if(calSel>fmt(now()))return;const s=S.subjects.find(x=>x.id===($('#ds-s')||{}).value);if(!s)return;
   const mm=parseInt(($('#ds-m')||{}).value)||0,hr=($('#ds-h')||{}).value,er=regDay(s,calSel,mm,hr);if(er){toast(er);return}
-  addLog(s,calSel,mm,hr,($('#ds-w')||{}).value,($('#ds-f')||{}).value);(impU(s)?null:lzGain(s,mm,'manual'));dsOpen=false;save();render();toast('Estudo registrado em '+br(calSel)+'. Streak atualizado.')}});
+  addLog(s,calSel,mm,hr,($('#ds-w')||{}).value,($('#ds-f')||{}).value);(impU(s)?null:lzGainD(s,mm,'manual',calSel,!!hr));dsOpen=false;save();render();toast('Estudo registrado em '+br(calSel)+'. Streak atualizado.')}});
 
 /* ----- Cópia das tarefas na tela principal: hoje + atrasadas, só matérias ativas ----- */
 function renderHomeTasks(){
@@ -147,7 +147,7 @@ function mark(id){
  const m=parseInt(($('#m-'+id)||{}).value)||0;
  const before=streak(s);
  const er=regDay(s,k,m,($('#h-'+id)||{}).value);if(er){toast(er);return}
- addLog(s,k,m,($('#h-'+id)||{}).value,($('#w-'+id)||{}).value,($('#f-'+id)||{}).value);(impU(s)?null:lzGain(s,m,'manual'));
+ addLog(s,k,m,($('#h-'+id)||{}).value,($('#w-'+id)||{}).value,($('#f-'+id)||{}).value);(impU(s)?null:lzGainD(s,m,'manual',k,!!($('#h-'+id)||{}).value));
  const after=streak(s);
  save();popId=id;render();
  const hit=MARKS.find(([n])=>n===after);
@@ -202,9 +202,9 @@ document.addEventListener('click',e=>{
  else if(a==='tab'){tab=b.dataset.t;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.t===tab));document.querySelectorAll('.pane').forEach(x=>x.classList.toggle('on',x.dataset.p===tab))}
  else if(a==='tfil'){filt=b.dataset.v;detail(id)}
  else if(a==='cday'){calSel=b.dataset.k;calM=calSel.slice(0,7);renderCal()}
- else if(a==='mday'){if(calSel>fmt(now()))return;const mm=parseInt(($('#dm-'+id)||{}).value)||0,er=regDay(s,calSel,mm,($('#dh-'+id)||{}).value);if(er){toast(er);return}addLog(s,calSel,mm,($('#dh-'+id)||{}).value,($('#dw-'+id)||{}).value,($('#df-'+id)||{}).value);(impU(s)?null:lzGain(s,mm,'manual'));save();render();toast('Estudo registrado em '+br(calSel)+'. Streak atualizado.')}
+ else if(a==='mday'){if(calSel>fmt(now()))return;const mm=parseInt(($('#dm-'+id)||{}).value)||0,er=regDay(s,calSel,mm,($('#dh-'+id)||{}).value);if(er){toast(er);return}addLog(s,calSel,mm,($('#dh-'+id)||{}).value,($('#dw-'+id)||{}).value,($('#df-'+id)||{}).value);(impU(s)?null:lzGainD(s,mm,'manual',calSel,!!($('#dh-'+id)||{}).value));save();render();toast('Estudo registrado em '+br(calSel)+'. Streak atualizado.')}
  else if(a==='dday'){clearDay(s,calSel);save();render();toast('Registro de '+br(calSel)+' removido.')}
- else if(a==='pday'){const d=$('#pd-d').value;if(!d||d>fmt(now())){toast('Escolha um dia até hoje.');return}const mm=parseInt($('#pd-m').value)||0,er=regDay(s,d,mm,$('#pd-h').value);if(er){toast(er);return}addLog(s,d,mm,$('#pd-h').value,$('#pd-w').value,$('#pd-f').value);(impU(s)?null:lzGain(s,mm,'manual'));save();render();detail(id);toast('Estudo registrado em '+br(d)+'. Streak atualizado.')}
+ else if(a==='pday'){const d=$('#pd-d').value;if(!d||d>fmt(now())){toast('Escolha um dia até hoje.');return}const mm=parseInt($('#pd-m').value)||0,er=regDay(s,d,mm,$('#pd-h').value);if(er){toast(er);return}addLog(s,d,mm,$('#pd-h').value,$('#pd-w').value,$('#pd-f').value);(impU(s)?null:lzGainD(s,mm,'manual',d,!!$('#pd-h').value));save();render();detail(id);toast('Estudo registrado em '+br(d)+'. Streak atualizado.')}
  else if(a==='cnav'){const v=+b.dataset.v,tm=fmt(now()).slice(0,7);
   if(v===0){calM=tm;calSel=fmt(now())}
   else{const [y,m]=calM.split('-').map(Number),nd=new Date(y,m-1+v,1,12);calM=fmt(nd).slice(0,7);calSel=calM===tm?fmt(now()):calM+'-01'}
