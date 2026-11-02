@@ -400,7 +400,7 @@ const yl=y=>+y%4===0&&(+y%100!==0||+y%400===0)?366:365,YR=[...new Set(ks.map(k=>
  ['🌙','Virada','bloco que passa da meia-noite',ev.some(x=>fmt(x.a)!==fmt(x.b))],['🍽','Hora do Almoço','bloco começando entre 12h e 14h',ev.some(x=>[12,13].includes(x.a.getHours()))],
  ['🍅','Pomodoro','4+ blocos de 25–35 min no dia',Object.values(pom).some(n=>n>=4)],['🎆','Primeiro de Janeiro','estudar em 1º de janeiro',ks.some(k=>k.slice(5)==='01-01')],
  ['🎂','Aniversário','1 ano desde o primeiro registro',diff(ks[0],ks[ks.length-1])>=365],['🧹','Faxineiro','arquivar uma matéria',S.subjects.some(s=>s.arch)]];
- const R=S.rec=S.rec||{},nw=[],CUM=['tot','yh','yd','ya','ym','yb','yk'],keep=(k,v,l,n,fn)=>{const o=R[k];if(!o||v>o.v){if(o&&!CUM.includes(k))nw.push('🏆 Novo recorde de '+n+'!');R[k]={v,l,h:fn?fn():'',hist:o?(CUM.includes(k)?o.hist||[]:(o.hist||[]).concat([[o.v,fmt(now())]])):[]}}else if(!o.h&&fn&&v===o.v)o.h=fn()};
+ const R=S.rec=S.rec||{},nw=[],CUM=['tot','yh','yd','ya','ym','yb','yk'],keep=(k,v,l,n,fn)=>{const o=R[k];if(!o||v>o.v){if(o&&!CUM.includes(k))nw.push('🏆 Novo recorde de '+n+'!');R[k]={v,l,h:fn?fn():'',hist:o?(CUM.includes(k)?o.hist||[]:(o.hist||[]).concat([[o.v,fmt(now())]])):[]}}else if(v<o.v||(v===o.v&&l!==o.l)){R[k]={v,l,h:fn?fn():'',hist:(o.hist||[]).filter(x=>x[0]<v)}}else if(fn)o.h=fn()};
  const bySub=z=>S.subjects.map(s=>[s.name,z.reduce((a,k)=>a+(s.days[k]||0),0)]).filter(x=>x[1]).sort((a,b)=>b[1]-a[1]).slice(0,6),
   sl=z=>ul(bySub(z).map(([n,m])=>`<b>${esc(n)}</b> · ${hh(m)}`)),bl=k=>ev.filter(x=>fmt(x.a)===k).sort((a,b)=>a.a-b.a),li=x=>`${hm(x.a)}–${hm(x.b)} · ${hh(mins(x))} · ${esc(x.s.name)}`;
  const dayDet=k=>{const L=bl(k),sm=L.reduce((a,x)=>a+mins(x),0),sp=L.length?(L[L.length-1].b-L[0].a)/6e4:0;
