@@ -21,6 +21,28 @@ function lzBonus(cid){
 function lzSettle(){const z=lzCfg(),u=z.use;if(!u||Date.now()<u.e)return false;
  z.led.push({id:lzId(),t:u.e,type:'use',min:-u.m,note:'Descanso concluído'});z.use=null;save();return true}
 function lzNeed(){const z=lzCfg(),b=lzBal(),d=lzDebt();if(shCfg().elx>Date.now()&&b<0)return Math.max(d,Math.ceil(-b))+1;if(z.rate<=0)return null;return d+(b<=0?Math.floor(-b/z.rate*60)+1:0)}
+
+/* ===== Estorno do banco ao apagar/editar estudo =====
+   Remove do banco o que um estudo creditou (ganho, bônus, dívida paga, prêmio Tudo ou Nada) e os Elos dele. */
+function lzGainD(s,m,src,k,tm){const id=lzGain(s,m,src),e=id&&lzCfg().led.find(x=>x.id===id);if(e){e.sd=k;e.sm=Math.round(m);if(tm)e.tm=1}return id}
+function lzRefund(sid,lo,hi,min){
+ const z=lzCfg(),base=z.led.filter(x=>x.t>=lo&&x.t<=hi&&((x.sid===sid&&(x.type==='gain'||x.type==='pay'))||x.type==='ton')),
+  ids=new Set(base.filter(x=>x.type==='gain').map(x=>x.id)),bon=z.led.filter(x=>x.type==='bonus'&&ids.has(x.ref)),hit=base.concat(bon);
+ if(!hit.length)return null;
+ let el=(+min||0)/10;bon.forEach(b=>{const g=base.find(x=>x.id===b.ref);if(g&&g.st>0)el+=g.st/10*.5});
+ z.led=z.led.filter(x=>!hit.includes(x));elCfg().g-=el;
+ return{n:hit.length,lz:hit.reduce((a,x)=>a+(x.min||0),0),bonus:bon.length>0}}
+function lzRefundSess(s,q){
+ if(q[2])return null;const a=+new Date(q[0]),b=+new Date(q[1]),min=(b-a)/6e4;let lo,hi;
+ if(q[3]){lo=q[3]-8000;hi=q[3]+8000}
+ else{const k=fmt(new Date(a)),g=lzCfg().led.find(x=>x.type==='gain'&&x.sid===s.id&&x.tm&&x.sd===k&&Math.abs((x.sm||0)-Math.round(min))<=1);
+  if(g){lo=g.t-8000;hi=g.t+8000}else{lo=b-6e4;hi=b+18e5}}
+ return lzRefund(s.id,lo,hi,min)}
+function lzRefundManual(s,k){let n=0,lz=0;
+ lzCfg().led.filter(x=>x.type==='gain'&&x.sid===s.id&&x.sd===k&&!x.tm&&x.src!=='elixir').forEach(x=>{const r=lzRefund(s.id,x.t-8000,x.t+8000,x.sm||x.st||0);if(r){n++;lz+=r.lz}});return n?{n,lz}:null}
+function lzRefundDay(s,k){let n=0;
+ (s.sessions||[]).filter(q=>q[0].slice(0,10)===k).forEach(q=>{if(lzRefundSess(s,q))n++});
+ if(lzRefundManual(s,k))n++;return n}
 let lzAll=false,lzHide=false;
 const lzClk=ms=>{const s=Math.max(0,Math.ceil(ms/1e3));return p2(Math.floor(s/60))+':'+p2(s%60)};
 
@@ -101,13 +123,17 @@ function renderLazer(){
   <div class="mgr"><label class="lzck"><input type="checkbox" id="lz-w" ${z.warn?'checked':''}> Mostrar aviso PROIBIDO quando o saldo zerar</label></div>
   <div class="mgr"><label class="lzck"><input type="checkbox" id="lz-l" ${z.ln?'checked':''}> Permitir empréstimo de lazer com juros</label><label>Juros (%)<input type="number" id="lz-i" min="0" max="300" step="5" value="${z.li}"></label><label>Limite por empréstimo (min)<input type="number" id="lz-m" min="5" max="240" step="5" value="${z.lm}"></label></div>
   <button class="btn main" data-lz="cfg">Salvar ajustes</button></div></div>
- <div class="mgs"><h2>Histórico de lançamentos</h2>${V.map(x=>`<div class="lzrow"><span>${lab(x)}<small>${dt(x.t)}</small></span>${right(x)}</div>`).join('')||'<p class="sub">Nenhum lançamento ainda.</p>'}${L.length>40?`<button class="btn" style="margin-top:10px" data-lz="more">${lzAll?'Mostrar menos':'Mostrar todos ('+L.length+')'}</button>`:''}</div>`}
+ <div class="mgs"><h2>Histórico de lançamentos</h2>${V.map(x=>`<div class="lzrow"><span>${lab(x)}<small>${dt(x.t)}</small></span>${right(x)}${['gain','bonus','pay'].includes(x.type)?`<button class="ghost danger" data-lz="del" data-id="${x.id}" title="Remover este lançamento do banco" aria-label="Remover lançamento">🗑</button>`:''}</div>`).join('')||'<p class="sub">Nenhum lançamento ainda.</p>'}${L.length>40?`<button class="btn" style="margin-top:10px" data-lz="more">${lzAll?'Mostrar menos':'Mostrar todos ('+L.length+')'}</button>`:''}</div>`}
 setInterval(()=>{const z=lzCfg();if(z.use&&Date.now()>=z.use.e){render();return}document.querySelectorAll('.lzcd[data-e]').forEach(n=>n.textContent=lzClk(+n.dataset.e-Date.now()))},1000);
 document.addEventListener('click',e=>{
  const b=e.target.closest('[data-lz]');if(!b)return;const z=lzCfg(),a=b.dataset.lz;
  if(a==='on'){z.on=true;if(!z.led.length)z.since=Date.now();z.since=z.since||Date.now();save();render();toast('Banco de lazer ativado. Começa a contar a partir de agora.')}
  else if(a==='off'){z.on=false;save();render();toast('Ganhos pausados. O saldo foi mantido.')}
  else if(a==='more'){lzAll=!lzAll;renderLazer()}
+ else if(a==='del'){const x=z.led.find(y=>y.id===b.dataset.id);if(!x)return;
+  if(!confirm('Remover este lançamento do banco?\n\n'+(x.type==='gain'?'O ganho, o bônus e a dívida paga por esse mesmo estudo também saem, e os Elos dele são estornados.':'Só este lançamento será removido.')+'\nO saldo é recalculado.'))return;
+  if(x.type==='gain'&&x.src!=='elixir'){if(!lzRefund(x.sid,x.t-8000,x.t+8000,x.sm||x.st||0))z.led=z.led.filter(y=>y!==x)}else z.led=z.led.filter(y=>y!==x);
+  save();render();toast('Lançamento removido. Saldo recalculado.')}
  else if(a==='hide'){lzHide=true;renderLazer()}
  else if(a==='cfg'){const r=parseFloat($('#lz-r').value),m=parseFloat($('#lz-b').value),i=parseFloat($('#lz-i').value),l=parseFloat($('#lz-m').value);if(!(r>=0&&r<=60)||!(m>=1&&m<=3)||!(i>=0&&i<=300)||!(l>=5&&l<=240)){toast('Confira os valores: taxa 0–60, bônus 1–3, juros 0–300%, limite 5–240.');return}z.rate=r;z.bonus=m;z.li=i;z.lm=l;z.warn=$('#lz-w').checked;z.ln=$('#lz-l').checked;save();render();toast('Ajustes salvos.')}
  else if(a==='use'){const m=parseFloat($('#lz-u').value),bl=lzBal();if(!(m>=1)||m>bl){toast('Escolha de 1 min até o seu saldo ('+lzN(bl)+').');return}z.use={s:Date.now(),e:Date.now()+m*6e4,m};save();try{if('Notification' in window&&Notification.permission==='default')Notification.requestPermission()}catch(x){}render();toast('Descanso de '+lzN(m)+' iniciado.')}
