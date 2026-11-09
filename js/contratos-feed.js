@@ -160,6 +160,6 @@ function renderCal(){
  let cells=DIAS.map(d=>`<div class='cw'>${d}</div>`).join('');
  for(let i=0;i<total;i++){const d=addD(start,i),k=fmt(d),L=by[k]||[];
   cells+=`<button class='cd${d.getMonth()!==m-1?' out':''}${k===t?' today':''}${k===calSel?' sel':''}' data-a='cday' data-k='${k}' style='${allTot(k)?`background:color-mix(in srgb,var(--flame) ${Math.min(34,Math.round(allTot(k)/120*34))}%,var(--bg))`:''}' aria-label='${br(k)}: ${L.length} tarefa${pl(L.length)}'><b>${d.getDate()}${studied(k)?' 🔥':''}${revN(k)?' 🔁'+revN(k):''}</b><span class='cc'>${L.slice(0,3).map(({s,x})=>`<i class='${x.done?'dn':''}' style='--c:${s.color}'>${x.time?x.time+' ':''}${xn(x)}</i>`).join('')}${L.length>3?`<em>+${L.length-3} mais</em>`:''}</span></button>`}
- el.innerHTML=`${dayTop()}<div class='ch'><h2>${MESES[m-1]} de ${y}</h2><div class='vt'>${viewSeg()}<span style='display:flex;gap:6px'><button class='btn' data-a='cnav' data-v='-1' aria-label='Mês anterior'>‹</button><button class='btn' data-a='cnav' data-v='0'>Hoje</button><button class='btn' data-a='cnav' data-v='1' aria-label='Próximo mês'>›</button></span></div></div>
- <div class='cg'>${cells}</div>${dayStudy()}`;
+ el.innerHTML=`<div class='cal-lay'><div class='cal-main'><div class='ch'><h2>${MESES[m-1]} de ${y}</h2><div class='vt'>${viewSeg()}<span style='display:flex;gap:6px'><button class='btn' data-a='cnav' data-v='-1' aria-label='Mês anterior'>‹</button><button class='btn' data-a='cnav' data-v='0'>Hoje</button><button class='btn' data-a='cnav' data-v='1' aria-label='Próximo mês'>›</button></span></div></div>
+ <div class='cg'>${cells}</div></div><aside class='cal-side'>${dayTop()}${dayStudy()}</aside></div>`;
 }
