@@ -1,0 +1,66 @@
+/* ===== Planejador: calendário, painel do dia, diálogo de tarefa e aba Tarefas ===== */
+/* Calendário: grade à esquerda, painel do dia à direita (empilha em telas menores) */
+.cal-lay{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+@media(min-width:1000px){.cal-lay{grid-template-columns:minmax(0,1.7fr) minmax(320px,1fr);align-items:start}
+ .cal-side{position:sticky;top:76px;max-height:calc(100vh - 96px);overflow:auto;padding-right:2px}}
+.cal .dp.top,.cal .dp.bot{margin:0 0 14px;padding:16px;border:1px solid var(--line);border-radius:18px;background:var(--bg)}
+.cal-side .dp:last-child,.wk-day .dp:last-child{margin-bottom:0}
+.wk-day{display:grid;grid-template-columns:minmax(0,1fr);gap:0;margin-top:16px}
+@media(min-width:900px){.wk-day{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}.wk-day .dp{margin-bottom:0}}
+.cal .dp h3{font-size:1.05rem;text-transform:capitalize}
+/* mais respiro na grade mensal e na semanal */
+.cg{gap:8px}
+.cd{min-height:96px;padding:8px;border-radius:16px;background:var(--surface)}
+.cd b{font-size:.95rem;font-weight:700}
+.cd.today b{color:var(--flame)}
+.cc i{font-size:.72rem;padding:2px 7px;border-radius:7px}
+.wk-in{min-width:640px}
+.wk-sc{max-height:min(70vh,720px)}
+@media(max-width:640px){.cal-lay{gap:12px}.cd{min-height:54px;padding:4px;background:var(--surface)}.cd b{font-size:.85rem}.cc i{padding:0}.wk-day{margin-top:12px}}
+/* formulário rápido do dia */
+.tf2{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.tf-main{display:flex;gap:8px;flex-wrap:wrap}
+.tf-main input[type=text]{flex:1 1 200px;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 12px;color:var(--ink);font-size:.98rem}
+.tf-main select{flex:0 1 150px;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;color:var(--ink)}
+.tf-opt{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:.85rem;color:var(--muted)}
+.ck2{display:flex;align-items:center;gap:6px;margin:0;cursor:pointer}
+.ck2 input{width:auto}
+/* diálogo de tarefa */
+#tdlg{width:min(520px,94vw)}
+#tdlg input.td-big{font-size:1.15rem;font-weight:600;padding:13px 14px;border-radius:12px;background:var(--bg);border:1px solid var(--line);color:var(--ink);width:100%}
+#tdlg .tq-g{display:flex;flex-direction:column;gap:8px}
+#tdlg .tq-l{font-size:.74rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.tq-r{display:flex;flex-wrap:wrap;gap:6px}
+.tq{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:99px;padding:6px 13px;font:inherit;font-size:.85rem;cursor:pointer;min-height:34px}
+.tq:hover{border-color:var(--muted)}
+.tq.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+#tdlg .td-more{border:1px solid var(--line);border-radius:12px;padding:8px 12px}
+#tdlg .td-more summary{cursor:pointer;color:var(--muted);font-size:.88rem}
+#tdlg .td-more>*{margin-top:10px}
+#tdlg textarea{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;color:var(--ink);width:100%;resize:vertical;font:inherit}
+/* aba Tarefas */
+.tk{max-width:820px}
+.tk-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.tk-hd h2{margin:0}
+.tk-hd select,.tk-opts select,.tk-opts input[type=date]{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;color:var(--ink);min-height:38px;max-width:100%}
+.tk-add{background:var(--bg);border-radius:16px;padding:12px;margin-bottom:8px}
+.tk-line{display:flex;gap:8px}
+.tk-line input{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 12px;color:var(--ink);font-size:1rem}
+.tk-opts{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.tk-sec{margin-top:16px}
+.tk-sec h3{display:flex;align-items:center;gap:8px;margin:0 0 4px;font-size:.78rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.tk-sec h3 span{font-weight:500;background:var(--track);border-radius:99px;padding:0 8px;font-size:.72rem;letter-spacing:0}
+.tk-sec.late h3{color:#e5484d}.tk-sec.today h3{color:var(--flame)}
+.tk-r{display:flex;gap:12px;align-items:flex-start;padding:9px 6px;border-bottom:1px solid var(--line);border-radius:10px}
+.tk-r:hover{background:var(--bg)}
+.tk-ck{width:22px;height:22px;border-radius:50%;border:2px solid var(--c);background:none;color:#fff;font-size:.7rem;font-weight:700;flex:none;margin-top:1px;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.tk-ck:hover{background:color-mix(in srgb,var(--c) 25%,transparent)}
+.tk-r.dn .tk-ck{background:var(--c)}
+.tk-b{flex:1;min-width:0;cursor:pointer}
+.tk-b:focus-visible{outline:2px solid var(--flame);outline-offset:2px;border-radius:6px}
+.tk-t{font-weight:500;overflow-wrap:anywhere;line-height:1.3}
+.tk-r.dn .tk-t{text-decoration:line-through;color:var(--muted)}
+.tk-m{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.78rem;color:var(--muted);margin-top:2px}
+.tk-done{margin-top:18px}
+.tk-done summary{cursor:pointer;color:var(--muted);font-size:.88rem;font-weight:600}
+.tk-empty{margin-top:16px}
