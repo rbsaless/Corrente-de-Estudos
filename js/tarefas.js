@@ -9,8 +9,13 @@ function tkRow(s,x,showDate){
  if(x.est)meta.push(hh(x.est));
  if(showDate&&x.date)meta.push(`<span class="${late?'lt':''}">${late?'Atrasada · ':''}${bd(x.date).slice(0,5)}</span>`);
  return`<div class="tk-r${x.done?' dn':''}" style="--c:${s.color}"><button type="button" class="tk-ck" data-a="ctog" data-id="${s.id}" data-tid="${x.id}" aria-label="${x.done?'Reabrir tarefa':'Concluir tarefa'}">${x.done?'✓':''}</button><div class="tk-b" role="button" tabindex="0" data-a="tedit" data-id="${s.id}" data-tid="${x.id}"><div class="tk-t">${xn(x)}</div><div class="tk-m">${meta.join('')}</div></div></div>`}
-function tkHtml(){
- const t=fmt(now()),tm=fmt(addD(now(),1)),A=S.subjects.filter(s=>!s.arch);
+/* visão (lista | colunas) e semana exibida (0 = atual, ±1...) */
+let tkV=(()=>{try{return localStorage.getItem('corrente-tk-view')==='cols'?'cols':'list'}catch(e){return'list'}})(),tkW=0,tkAll=false;
+const tkWk=()=>{const m=monday(addD(now(),tkW*7));return Array.from({length:7},(_,i)=>fmt(addD(m,i)))};
+const TKD=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+/* emb=true: cópia usada dentro do Planejador (sempre em colunas) */
+function tkHtml(emb){
+ const t=fmt(now()),tm=fmt(addD(now(),1)),A=S.subjects.filter(s=>!s.arch),wk=tkWk(),cols=!!emb||tkV==='cols';
  if(tkDate===null)tkDate=t;
  if(tkF!=='all'&&!A.some(s=>s.id===tkF))tkF='all';
  const all=allTasks().filter(o=>!o.s.arch&&(tkF==='all'||o.s.id===tkF)),
@@ -20,18 +25,29 @@ function tkHtml(){
  const late=open.filter(o=>o.x.date&&o.x.date<t),nod=open.filter(o=>!o.x.date),by={};
  open.filter(o=>o.x.date&&o.x.date>=t).forEach(o=>(by[o.x.date]=by[o.x.date]||[]).push(o));
  const sec=(ti,L,cls,sd)=>L.length?`<section class="tk-sec ${cls||''}"><h3>${ti}<span>${L.length}</span></h3>${L.map(o=>tkRow(o.s,o.x,sd)).join('')}</section>`:'';
- let body=sec('Atrasadas',late,'late',true);
- Object.keys(by).sort().forEach(k=>{body+=sec(tkDay(k),by[k],k===t?'today':'')});
- body+=sec('Sem data',nod,'');
+ let body='';
+ if(cols){
+  /* atrasadas e sem data só aparecem na semana atual */
+  if(tkW===0)body+=sec('Atrasadas',late,'late',true)+sec('Sem data',nod,'');
+  body+=`<div class="tk-cols">${wk.map((k,i)=>{
+   const L=all.filter(o=>o.x.date===k).sort((a,b)=>(a.x.done-b.x.done)||cmp(a,b));
+   return`<div class="tk-col${k===t?' today':''}${k<t?' past':''}"><button type="button" class="tk-ch" data-tk="day" data-k="${k}" title="Adicionar tarefa neste dia"><b>${TKD[i]}</b><span>${k.slice(8)}/${k.slice(5,7)}</span></button>${L.map(o=>tkRow(o.s,o.x,false)).join('')||'<p class="tk-ce">—</p>'}</div>`}).join('')}</div>`}
+ else{
+  body=(tkW===0||tkAll?sec('Atrasadas',late,'late',true):'');
+  Object.keys(by).sort().filter(k=>tkAll||wk.includes(k)).forEach(k=>{body+=sec(tkDay(k),by[k],k===t?'today':'')});
+  body+=(tkW===0||tkAll?sec('Sem data',nod,''):'')}
  const dS=dn.slice().sort((a,b)=>String(b.x.doneAt||'').localeCompare(String(a.x.doneAt||''))).slice(0,30),
   doneSec=dn.length?`<details class="tk-done" data-tk-det${tkShowDone?' open':''}><summary>Concluídas (${dn.length})</summary>${dS.map(o=>tkRow(o.s,o.x,true)).join('')}</details>`:'',
   chip=(l,v,on)=>`<button type="button" class="tq${on?' on':''}" data-tk="dt" data-v="${v}">${l}</button>`,
   add=A.length?`<div class="tk-add"><div class="tk-line"><input type="text" id="tk-n" maxlength="80" placeholder="＋ Adicionar tarefa" value="${esc(tkDraft)}" aria-label="Nova tarefa"><button type="button" class="btn main" data-tk="add">Adicionar</button></div>
    <div class="tk-opts"><select id="tk-s" aria-label="Matéria">${A.map(s=>`<option value="${s.id}"${s.id===cs?' selected':''}>${esc(s.name)}</option>`).join('')}</select>${chip('Hoje',0,tkDate===t)}${chip('Amanhã',1,tkDate===tm)}${chip('Sem data','',tkDate==='')}<input type="date" id="tk-d" value="${tkDate}" aria-label="Dia"></div></div>`
-   :`<p class="sub">Adicione uma matéria ativa em Planejar › Matérias para criar tarefas.</p>`;
- return`<div class="mgs tk"><div class="tk-hd"><div><h2>✅ Tarefas</h2><p class="sub" style="margin:2px 0 0">${open.length} pendente${pl(open.length)}${late.length?` · <span class="lt">${late.length} atrasada${pl(late.length)}</span>`:''}</p></div>
-  <select id="tk-f" aria-label="Filtrar por matéria"><option value="all">Todas as matérias</option>${A.map(s=>`<option value="${s.id}"${s.id===tkF?' selected':''}>${esc(s.name)}</option>`).join('')}</select></div>
-  ${add}${body||'<p class="sub tk-empty">Nenhuma tarefa pendente. 🎉</p>'}${doneSec}</div>`}
+   :`<p class="sub">Adicione uma matéria ativa em Planejar › Matérias para criar tarefas.</p>`,
+  rng=`${wk[0].slice(8)}/${wk[0].slice(5,7)} a ${wk[6].slice(8)}/${wk[6].slice(5,7)}`,
+  nav=`<div class="tk-nav"><button type="button" class="btn" data-tk="wk" data-v="-1" aria-label="Semana anterior">‹</button><button type="button" class="btn" data-tk="wk" data-v="0">Hoje</button><button type="button" class="btn" data-tk="wk" data-v="1" aria-label="Próxima semana">›</button><b>${tkW===0?'Esta semana':tkW===1?'Próxima semana':tkW===-1?'Semana passada':'Semana'} · ${rng}</b>${cols?'':`<button type="button" class="tq${tkAll?' on':''}" data-tk="all" aria-pressed="${tkAll}">Ver tudo</button>`}</div>`,
+  views=emb?'':`<div class="seg" role="group" aria-label="Visão das tarefas">${[['list','Lista'],['cols','Colunas']].map(([v,l])=>`<button type="button" class="${(tkV===v)?'on':''}" data-tk="vw" data-v="${v}">${l}</button>`).join('')}</div>`;
+ return`<div class="mgs tk${cols?' tk-wide':''}"><div class="tk-hd"><div><h2>✅ Tarefas</h2><p class="sub" style="margin:2px 0 0">${open.length} pendente${pl(open.length)}${late.length?` · <span class="lt">${late.length} atrasada${pl(late.length)}</span>`:''}</p></div>
+  <div class="tk-hr">${views}<select id="tk-f" aria-label="Filtrar por matéria"><option value="all">Todas as matérias</option>${A.map(s=>`<option value="${s.id}"${s.id===tkF?' selected':''}>${esc(s.name)}</option>`).join('')}</select></div></div>
+  ${add}${nav}${body||'<p class="sub tk-empty">Nenhuma tarefa pendente. 🎉</p>'}${doneSec}</div>`}
 function tkAdd(){
  const n=(($('#tk-n')||{}).value||'').trim(),s=S.subjects.find(x=>x.id===($('#tk-s')||{}).value);
  if(!n){toast('Digite o nome da tarefa.');const i=$('#tk-n');if(i)i.focus();return}if(!s)return;
@@ -43,6 +59,10 @@ document.addEventListener('click',e=>{
  const b=e.target.closest('[data-tk]');if(!b)return;const a=b.dataset.tk;
  if(a==='dt'){tkKeep();const v=b.dataset.v;tkDate=v===''?'':fmt(addD(now(),+v));render();setTimeout(()=>{const i=$('#tk-n');if(i)i.focus()},0)}
  else if(a==='add')tkAdd();
+ else if(a==='wk'){tkKeep();const v=+b.dataset.v;tkW=v===0?0:tkW+v;render()}
+ else if(a==='all'){tkKeep();tkAll=!tkAll;render()}
+ else if(a==='vw'){tkKeep();tkV=b.dataset.v;try{localStorage.setItem('corrente-tk-view',tkV)}catch(e){}render()}
+ else if(a==='day'){tkKeep();tkDate=b.dataset.k;render();setTimeout(()=>{const i=$('#tk-n');if(i)i.focus()},0)}
  else if(a==='new'){const v=(($('#cd-n')||{}).value)||'';openTask('',null,calSel);const n=$('#td-n');if(n&&v)n.value=v}});
 document.addEventListener('change',e=>{const i=e.target.id;
  if(i==='tk-f'){tkKeep();tkF=e.target.value;render()}
