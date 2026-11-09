@@ -2,8 +2,8 @@
 .dpt{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .dpt>div{display:flex;gap:6px}
 .dpt .btn{min-height:40px;padding:6px 14px}
-.cal .dp.top{margin-top:0;margin-bottom:22px;padding-bottom:20px;border-bottom:1px solid var(--line)}
-.cal .dp.bot{margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}
+.cal .dp.top{margin-top:0;margin-bottom:22px;padding-bottom:22px;border-bottom:1px solid var(--line)}
+.cal .dp.bot{margin-top:0;padding-top:0;border-top:0}
 #htk .pn{margin-bottom:20px}
 #htk .pn h3{margin:0}
 #htk .tl{margin-top:10px}
@@ -59,6 +59,6 @@
 .dsb{width:100%;border:0;color:var(--ink);cursor:pointer;font:inherit;text-align:left}.dsb:hover{filter:brightness(1.1)}
 .dsq{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.dsq .ghost{padding:5px 10px}.dsq input{width:76px}
 .dsf{align-items:flex-start;flex-direction:column}.dsm{width:100%}.dsm summary{cursor:pointer;color:var(--muted);font-size:.85rem}.dsm>*{margin-top:8px}.dsm input[type=text]{width:100%}
-.wk-ss{padding:0}.wk-ss b,.wk-ss small{display:none}
+.wk-ss{padding:1px 6px;z-index:1}.wk-ev{z-index:3}
 #rp-tabs{display:flex;flex-wrap:wrap;gap:3px;padding:4px;border-radius:13px}
 #rp-tabs button{flex:0 1 auto;padding:7px 11px;font-size:.9rem;border-radius:10px}
