@@ -1,22 +1,4 @@
-/* ===== Planejador: calendário, painel do dia, diálogo de tarefa e aba Tarefas ===== */
-/* Calendário: grade à esquerda, painel do dia à direita (empilha em telas menores) */
-.cal-lay{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
-@media(min-width:1000px){.cal-lay{grid-template-columns:minmax(0,1.7fr) minmax(320px,1fr);align-items:start}
- .cal-side{position:sticky;top:76px;max-height:calc(100vh - 96px);overflow:auto;padding-right:2px}}
-.cal .dp.top,.cal .dp.bot{margin:0 0 14px;padding:16px;border:1px solid var(--line);border-radius:18px;background:var(--bg)}
-.cal-side .dp:last-child,.wk-day .dp:last-child{margin-bottom:0}
-.wk-day{display:grid;grid-template-columns:minmax(0,1fr);gap:0;margin-top:16px}
-@media(min-width:900px){.wk-day{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}.wk-day .dp{margin-bottom:0}}
-.cal .dp h3{font-size:1.05rem;text-transform:capitalize}
-/* mais respiro na grade mensal e na semanal */
-.cg{gap:8px}
-.cd{min-height:96px;padding:8px;border-radius:16px;background:var(--surface)}
-.cd b{font-size:.95rem;font-weight:700}
-.cd.today b{color:var(--flame)}
-.cc i{font-size:.72rem;padding:2px 7px;border-radius:7px}
-.wk-in{min-width:640px}
-.wk-sc{max-height:min(70vh,720px)}
-@media(max-width:640px){.cal-lay{gap:12px}.cd{min-height:54px;padding:4px;background:var(--surface)}.cd b{font-size:.85rem}.cc i{padding:0}.wk-day{margin-top:12px}}
+/* ===== Planejador: formulário rápido do dia, diálogo de tarefa e aba Tarefas ===== */
 /* formulário rápido do dia */
 .tf2{display:flex;flex-direction:column;gap:8px;margin:12px 0}
 .tf-main{display:flex;gap:8px;flex-wrap:wrap}
