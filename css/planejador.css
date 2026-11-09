@@ -1,4 +1,4 @@
-/* ===== Planejador: formulário rápido do dia, diálogo de tarefa e aba Tarefas ===== */
+/* ===== Planejador: formulário rápido do dia, diálogo de tarefa, aba Tarefas e layout do Planejador ===== */
 /* formulário rápido do dia */
 .tf2{display:flex;flex-direction:column;gap:8px;margin:12px 0}
 .tf-main{display:flex;gap:8px;flex-wrap:wrap}
@@ -21,7 +21,7 @@
 #tdlg .td-more>*{margin-top:10px}
 #tdlg textarea{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;color:var(--ink);width:100%;resize:vertical;font:inherit}
 /* aba Tarefas */
-.tk{max-width:820px}
+.tk{max-width:none}
 .tk-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .tk-hd h2{margin:0}
 .tk-hd select,.tk-opts select,.tk-opts input[type=date]{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;color:var(--ink);min-height:38px;max-width:100%}
@@ -46,3 +46,15 @@
 .tk-done{margin-top:18px}
 .tk-done summary{cursor:pointer;color:var(--muted);font-size:.88rem;font-weight:600}
 .tk-empty{margin-top:16px}
+/* layout do Planejador: calendário à esquerda, matérias em cartões à direita */
+.pn-lay{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;margin-top:8px}
+@media(min-width:900px){.pn-lay{grid-template-columns:340px minmax(0,1fr);align-items:start}.pn-cal{position:sticky;top:76px}}
+.pn-cal{background:var(--bg);border-radius:20px;padding:14px}
+.pn-cal .cg{gap:4px}
+.pn-cal .cd{min-height:46px;padding:4px;border-radius:12px;align-items:center;justify-content:center;gap:2px;background:var(--surface)}
+.pn-cal .cd span{font-size:.85rem;font-weight:600}
+.pn-tk>b{font-size:1.05rem}
+.pn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;margin-top:12px}
+.pn-sub{background:var(--bg);border-radius:18px;padding:12px 14px;border-top:4px solid var(--c)}
+.pn-t{margin:8px 0 0;padding-top:8px;border-top:1px solid var(--line)}
+.pn-sub input{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;color:var(--ink);min-width:0}
