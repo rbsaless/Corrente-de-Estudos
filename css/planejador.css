@@ -58,3 +58,18 @@
 .pn-sub{background:var(--bg);border-radius:18px;padding:12px 14px;border-top:4px solid var(--c)}
 .pn-t{margin:8px 0 0;padding-top:8px;border-top:1px solid var(--line)}
 .pn-sub input{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;color:var(--ink);min-width:0}
+
+/* Tarefas: navegação de semana, visão em colunas */
+.tk-hr{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tk-nav{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:10px 0 4px}
+.tk-nav .btn{min-height:36px;padding:4px 12px}
+.tk-nav b{margin-left:6px;font-size:.9rem}
+.tk-cols{display:grid;grid-template-columns:repeat(7,minmax(165px,1fr));gap:8px;margin-top:12px;overflow-x:auto;padding-bottom:6px}
+.tk-col{background:var(--bg);border-radius:14px;padding:8px 6px;min-width:0}
+.tk-col.today{outline:2px solid var(--flame)}
+.tk-col.past{opacity:.85}
+.tk-ch{width:100%;display:flex;justify-content:space-between;align-items:baseline;background:none;border:0;border-bottom:1px solid var(--line);padding:2px 6px 8px;color:var(--ink);font:inherit;cursor:pointer}
+.tk-ch span{font-size:.78rem;color:var(--muted)}
+.tk-col.today .tk-ch b{color:var(--flame)}
+.tk-col .tk-r{padding:7px 4px;gap:8px}
+.tk-ce{margin:10px 6px;color:var(--muted);text-align:center}
