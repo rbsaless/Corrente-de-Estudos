@@ -38,14 +38,14 @@ function renderWeek(){
   return `<div class='wk-col${k===t?' today':''}' data-a='wslot' data-day='${k}' style='--hh:${HH}px;height:${24*HH}px'>${evs}${ssh}${nowLine}</div>`}).join('');
  const un=allTasks().filter(o=>!o.x.done&&!o.x.date);
  const tray=un.length?`<div class='wk-tray'><h4>📥 Tarefas sem data · arraste para a agenda</h4><div class='wk-tl'>${un.map(({s,x})=>`<span class='wk-tc' data-sid='${s.id}' data-tid='${x.id}' style='--c:${s.color}' title='${esc(s.name)}'>${xn(x)}</span>`).join('')}</div></div>`:'';
- el.innerHTML=`${dayTop()}<div class='ch'><h2 style='text-transform:none'>${title}</h2><div class='vt'>${viewSeg()}<span style='display:flex;gap:6px'><button class='btn' data-a='wnav' data-v='-1' aria-label='Semana anterior'>‹</button><button class='btn' data-a='wnav' data-v='0'>Hoje</button><button class='btn' data-a='wnav' data-v='1' aria-label='Próxima semana'>›</button></span></div></div>
+ el.innerHTML=`<div class='ch'><h2 style='text-transform:none'>${title}</h2><div class='vt'>${viewSeg()}<span style='display:flex;gap:6px'><button class='btn' data-a='wnav' data-v='-1' aria-label='Semana anterior'>‹</button><button class='btn' data-a='wnav' data-v='0'>Hoje</button><button class='btn' data-a='wnav' data-v='1' aria-label='Próxima semana'>›</button></span></div></div>
  <div class='wk-box'><div class='wk-x'><div class='wk-in'>
   <div class='wk-head'><div></div>${head}</div>
   <div class='wk-adr'><div class='wk-adl'>sem hora</div>${adr}</div>
   <div class='wk-sc' id='wkSc'><div class='wk-body'><div class='wk-ax' style='height:${24*HH}px'>${axis}</div>${cols}</div></div>
  </div></div></div>
  <div class='wk-lg'><span><i></i>planejado (tarefas, concluídas ficam riscadas)</span><span><i class='r'></i>realizado (cronômetro e registros)</span></div>
- <p class='sub' style='margin:8px 0 0;font-size:.85rem'>Clique num horário vazio para criar uma tarefa · arraste para mover · puxe a borda de baixo para mudar a duração · clique na tarefa para editar · clique num bloco preenchido para ver o que estudou.</p>${tray}${dayStudy()}`;
+ <p class='sub' style='margin:8px 0 0;font-size:.85rem'>Clique num horário vazio para criar uma tarefa · arraste para mover · puxe a borda de baixo para mudar a duração · clique na tarefa para editar · clique num bloco preenchido para ver o que estudou.</p>${tray}<div class='wk-day'>${dayTop()}${dayStudy()}</div>`;
  const sc=$('#wkSc');
  if(sc){sc.scrollTop=wkScroll!=null?wkScroll:Math.max(0,(new Date().getHours()-1)*HH);wkScroll=sc.scrollTop}
  updNow();
@@ -146,14 +146,17 @@ function openTask(sid,tid,day,time){
  const opts=S.subjects.filter(s=>!s.arch||s===subj).map(s=>`<option value='${s.id}'${s.id===subj.id?' selected':''}>${esc(s.name)}${s.arch?' (arquivada)':''}</option>`).join('');
  $('#tdBody').dataset.sid=o?o.s.id:'';$('#tdBody').dataset.tid=tid||'';
  $('#tdBody').style.setProperty('--c',subj.color);
+ const dur0=+(o?(x.dur||x.est||60):(x.dur||60)),qd=(l,v)=>`<button type='button' class='tq' data-tq='d' data-v='${v}'>${l}</button>`,qu=v=>`<button type='button' class='tq${dur0===v?' on':''}' data-tq='u' data-v='${v}'>${v<60?v+' min':(v/60)+' h'}</button>`;
  $('#tdBody').innerHTML=`<div class='row'><h2 style='margin:0;font-size:1.3rem'>${o?'Editar tarefa':'Nova tarefa'}</h2><button class='ghost' data-w='close'>Fechar</button></div>
+ <input type='text' id='td-n' class='td-big' maxlength='80' value='${esc(x.name)}' placeholder='O que você vai estudar ou fazer?' aria-label='Tarefa'>
  <label>Matéria<select id='td-s'>${opts}</select></label>
- <label>Tarefa<input type='text' id='td-n' maxlength='80' value='${esc(x.name)}' placeholder='Ex.: Resolver lista de exercícios'></label>
- <div class='r2'><label>Dia<input type='date' id='td-d' value='${x.date||''}'></label><label>Início<input type='time' id='td-t' value='${x.time||''}'></label></div>
- <div class='r2'><label>Duração (min)<input type='number' id='td-u' min='15' max='1440' step='5' value='${o?(x.dur||x.est||60):(x.dur||60)}'></label><label>Prioridade<select id='td-p'>${Object.entries(PR).map(([k,l])=>`<option value='${k}'${x.prio===k?' selected':''}>${l}</option>`).join('')}</select></label></div>
- <div class='r2'><label>⏱ Tempo da tarefa (min)<input type='number' id='td-e' min='0' max='1440' step='5' placeholder='0' value='${x.est||''}'></label><span></span></div>
- <label>Anotações<textarea id='td-o' rows='2' maxlength='400' placeholder='Resumo, dúvidas, links...'>${esc(x.note||'')}</textarea></label>
- <label class='ck'><input type='checkbox' id='td-x'${x.exam?' checked':''}> 📝 Prova (gera contagem regressiva)</label>
+ <div class='tq-g'><span class='tq-l'>Quando</span><div class='tq-r'>${qd('Hoje','0')}${qd('Amanhã','1')}${qd('Em 1 semana','7')}${qd('Sem data','')}</div><div class='r2'><label>Dia<input type='date' id='td-d' value='${x.date||''}'></label><label>Início (opcional)<input type='time' id='td-t' value='${x.time||''}'></label></div></div>
+ <div class='tq-g'><span class='tq-l'>Duração</span><div class='tq-r'>${[15,30,45,60,90,120].map(qu).join('')}</div><label>Outro valor (min)<input type='number' id='td-u' min='15' max='1440' step='5' value='${dur0}'></label></div>
+ <label>Prioridade<select id='td-p'>${Object.entries(PR).map(([k,l])=>`<option value='${k}'${x.prio===k?' selected':''}>${l}</option>`).join('')}</select></label>
+ <details class='td-more'${(x.est||x.note||x.exam)?' open':''}><summary>Mais opções</summary>
+  <label>⏱ Tempo da tarefa (min)<input type='number' id='td-e' min='0' max='1440' step='5' placeholder='0' value='${x.est||''}'></label>
+  <label>Anotações<textarea id='td-o' rows='2' maxlength='400' placeholder='Resumo, dúvidas, links...'>${esc(x.note||'')}</textarea></label>
+  <label class='ck'><input type='checkbox' id='td-x'${x.exam?' checked':''}> 📝 Prova (gera contagem regressiva)</label></details>
  ${o?`<label class='ck'><input type='checkbox' id='td-c'${x.done?' checked':''}> Concluída</label>`:''}
  <div class='row'>${o?`<button class='btn danger' data-w='del'>Excluir</button>`:'<span></span>'}<span><button class='btn' data-w='close'>Cancelar</button> <button class='btn main' data-w='save'>Salvar</button></span></div>`;
  if(!$('#tdlg').open)$('#tdlg').showModal();
@@ -362,7 +365,7 @@ function objShow(){OBJ.forEach(n=>{const e=$('#obj-'+n);if(e)e.hidden=n!==rTab})
 document.addEventListener('click',e=>{const b=e.target.closest('[data-a="objtab"]');if(!b)return;objTab=b.dataset.v;objShow()});
 const PAGES=['relatorio','lazer','lost','lumi','feed','loja','lumiia','ligas']; /* ALTERADO v20 */let curPage='',fromHome=false;
 function route(){
- let h=decodeURIComponent(location.hash.slice(1));if(OBJ.includes(h)){rTab=h;h='relatorio'}if(h==='planejamento'){rTab='planej';h='relatorio'}if(h==='objetivos'){rTab='metas';h='relatorio'}if(h==='calendario'){rTab='cal';h='relatorio'}if(h==='historico'){rTab='hist';h='relatorio'}const p=PAGES.includes(h)?h:'',ch=p!==curPage;curPage=p;
+ let h=decodeURIComponent(location.hash.slice(1));if(OBJ.includes(h)){rTab=h;h='relatorio'}if(h==='planejamento'){rTab='planej';h='relatorio'}if(h==='objetivos'){rTab='metas';h='relatorio'}if(h==='calendario'){rTab='cal';h='relatorio'}if(h==='tarefas'){rTab='tarefas';h='relatorio'}if(h==='historico'){rTab='hist';h='relatorio'}const p=PAGES.includes(h)?h:'',ch=p!==curPage;curPage=p;
  $('#home').hidden=!!p;PAGES.forEach(n=>{const e=$('#pg-'+n);if(e)e.hidden=n!==p});
  if(ch)window.scrollTo(0,0);
  objShow();render();
@@ -374,4 +377,3 @@ document.addEventListener('click',e=>{
  else if(fromHome)history.back();
  else{history.replaceState(null,'',location.pathname+location.search);route()}
 });
-
