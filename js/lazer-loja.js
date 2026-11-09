@@ -211,12 +211,12 @@ document.addEventListener('click',e=>{
   if(!(x<y)||y>n||x<n-7*864e5){toast('Período inválido. Use datas passadas, até 7 dias atrás, com início antes do fim.');return}
   const P=idRetro(x,y,'',false);if(!P.n||P.m<1){toast('Nada a cobrar: esse período já foi cobrado ou tinha estudo planejado.');return}
   const nt=(v('cr-n')||'').trim().slice(0,60);
-  if(!confirm(`Cobrar ${hh(P.m)} como ocioso?\n\nSerão descontados ${lzN(P.lz)} de lazer${P.xp>0?` e ${Math.round(P.xp)} XP`:''}.`))return;
+  if(!confirm(`Cobrar ${hh(P.m)} como ocioso?\n\nSerão descontados ${lzN(P.lz)} de lazer${P.xp>0?` e ${Math.round(P.xp)} XP`:''}.${idImpTxt(P.imp)}`))return;
   const r=idRetro(x,y,nt,true);save();render();toast(`Cobrança retroativa: −${lzN(r.lz)} de lazer${r.xp>0?` e −${Math.round(r.xp)} XP`:''} (${hh(r.m)}).`);return}
  else if(a==='awx'||a==='rtxr'){const o=a==='awx'?d.aw:d.rt,x0=new Date(v(a==='awx'?'aw-x':'rt-x')).getTime();
   if(!o||!(x0>=o.s)||x0>n){toast('Horário inválido: precisa ser depois do início ('+(o?idHM(o.s):'')+') e antes de agora.');return}
   const x=Math.max(x0,n-7*864e5),nm=a==='awx'?'Ocupado/Fora encerrado retroativamente':(o.n||'Rotina')+' encerrada retroativamente',P=idRetro(x,n,'',false);
-  if(P.lz>0||P.xp>0){if(!confirm(`Você voltou às ${idHM(x)}. De lá até agora (${hh(P.m)}) será cobrado como ocioso: −${lzN(P.lz)} de lazer${P.xp>0?` e −${Math.round(P.xp)} XP`:''}. Confirmar?`))return}
+  if(P.lz>0||P.xp>0){if(!confirm(`Você voltou às ${idHM(x)}. De lá até agora (${hh(P.m)}) será cobrado como ocioso: −${lzN(P.lz)} de lazer${P.xp>0?` e −${Math.round(P.xp)} XP`:''}. Confirmar?${idImpTxt(P.imp)}`))return}
   if(a==='awx')d.aw=null;else d.rt=null;d.last=n;idRetro(x,n,nm,true);
   toast(P.m>=1?`Encerrado às ${idHM(x)}. Cobrado: ${hh(P.m)} (−${lzN(P.lz)} de lazer).`:'Encerrado.')}
  else if(a==='fix'){const x=new Date(v('fx-a')).getTime(),y=new Date(v('fx-b')).getTime();
@@ -243,15 +243,34 @@ function idSegs(a,b){const d=idCfg();let cut=d.log.map(x=>[x.a,x.b]);
  cut=cut.filter(c=>c[1]>a&&c[0]<b).sort((x,y)=>x[0]-y[0]);
  const segs=[];let c=a;cut.forEach(([s,e])=>{if(s>c)segs.push([c,Math.min(s,b)]);c=Math.max(c,e)});if(c<b)segs.push([c,b]);
  const out=[];segs.forEach(([s,e])=>{while(s<e){const nx=new Date(s);nx.setHours(24,0,0,0);const m=Math.min(+nx,e);if(m-s>=6e4)out.push([s,m]);s=m}});return out}
-function idRetro(a,b,note,apply){const d=idCfg(),segs=idSegs(a,b);let bal=lzBal(),xcap=Math.max(0,xpRun().xp);const T={m:0,lz:0,xp:0,n:segs.length};
+function idRetro(a,b,note,apply){const d=idCfg(),segs=idSegs(a,b);let bal=lzBal(),xcap=Math.max(0,xpRun().xp);const T={m:0,lz:0,xp:0,n:segs.length,days:{}};
  segs.forEach(([s,e])=>{const m=(e-s)/6e4,lz=m*d.lr/60,over=lz-Math.max(0,bal);let mo=0;if(d.lr>0){if(over>0)mo=Math.min(m,over*60/d.lr)}else if(bal<=0)mo=m;
-  const xp=Math.max(0,Math.min(mo*d.xr/60,xcap));T.m+=m;T.lz+=lz;T.xp+=xp;bal-=lz;xcap-=xp;if(!apply)return;
+  const xp=Math.max(0,Math.min(mo*d.xr/60,xcap));T.m+=m;T.lz+=lz;T.xp+=xp;bal-=lz;xcap-=xp;{const dk=fmt(new Date(s));T.days[dk]=(T.days[dk]||0)+lz}if(!apply)return;
   const day=fmt(new Date(s));
   if(lz>0)lzCfg().led.push({id:lzId(),t:e,type:'idle',min:-Math.round(lz*1000)/1000,d:day,note:'Ociosidade retroativa · '+br(day)+' '+idHM(s)+'–'+idHM(e)+(note?' · '+note:'')});
   if(xp>0){const adj=chCfg().adj;let x=adj.find(y=>y.idle&&y.d===day);if(!x){x={d:day,v:0,idle:1};adj.push(x)}x.v=Math.round((x.v-xp)*1000)/1000}
   d.log.push({a:s,b:e,lz,xp,d:day,r:1})});
  if(apply){d.log.sort((x,y)=>x.a-y.a);const lim=Date.now()-7*864e5;d.log=d.log.filter(x=>x.b>lim)}
+ T.imp=stkRetro(T.days,apply,T.lz);
  return T}
+/* Reajusta o saldo de fim de dia (k.bal) dos dias afetados e aplica o reset de −10h, a partir do primeiro dia que passar do limite.
+   Só dias já fechados (até k.last) são tratados aqui; dias ainda não fechados serão avaliados pelo fechamento normal (stkSettle),
+   que lê o k.bal já corrigido. Congelamento (tok) evita o reset, igual ao fechamento normal. */
+function stkRetro(days,apply,tot){
+ const k=stkCfg(),t=fmt(now()),ks=Object.keys(days).filter(d=>days[d]>0).sort();if(!ks.length)return null;
+ const wiped=new Set();lzCfg().led.forEach(x=>{const m=/o dia (\d\d\/\d\d) terminou/.exec(x.note||'');if(m)wiped.add(m[1])});if(k.zeroAt)wiped.add(br(k.zeroAt));
+ let carry=0,hit=null;
+ for(let d=ks[0];d<t;d=fmt(addD(parse(d),1))){
+  carry+=days[d]||0;const old=k.bal[d];
+  if(old===undefined||wiped.has(br(d))){if(wiped.has(br(d)))carry=0;continue}
+  const nb=Math.round(old-carry);if(apply)k.bal[d]=nb;
+  if(!hit&&k.last&&d<=k.last&&old>=-600&&nb<-600)hit=d}
+ if(!hit)return null;
+ const off=new Set(chCfg().off),fz=new Set(k.fz),sk=hit>k.zeroAt&&(stkQ(hit)||off.has(hit)||fz.has(hit)),frz=sk&&k.tok>0,
+  bal=lzBal()-(apply?0:(tot||0)),info={d:hit,sk,frz,cr:Math.max(0,-bal),db:lzDebt(),el:elBal()};
+ if(apply){if(frz){k.tok--;k.sv.push(hit);toast('🧊 Congelamento evitou o reset de −10h em '+br(hit)+'.')}else{if(sk)k.zeroAt=hit;stkWipe(hit,sk)}}
+ return info}
+const idImpTxt=i=>!i?'':i.frz?`\n\n🧊 O dia ${br(i.d)} passaria de −10h, mas um Congelamento será usado e evita o reset.`:`\n\n⚠️ O dia ${br(i.d)} passa de −10h. Ao confirmar: ${i.sk?'a streak zera a partir desse dia, ':''}o saldo negativo (${lzN(i.cr)}), a dívida de estudo (${lzN(i.db)}) e os Elos (${i.el}) serão zerados.`;
 setInterval(()=>idTick(),15000);setTimeout(()=>{idTick();renderIdle()},600);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)idTick()});
 
