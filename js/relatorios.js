@@ -93,7 +93,7 @@ function repTips(d){
  if(!L.length)L.push('Tudo em dia por enquanto. Continue assim! 💪');
  return{L,act}}
 /* ===== V94: Relatório e Planejamento em 4 grupos (Planejar · Acompanhar · Objetivos · Compromissos) ===== */
-const RPG=[['plan','🗓️ Planejar',[['planner','🧭 Planejador'],['plano','🗓️ Plano semanal'],['cal','📅 Calendário'],['planej','🗂️ Matérias']]],['acomp','📈 Acompanhar',[['rel','📈 Resumo'],['hist','📊 Histórico']]],['obj','🎯 Objetivos',[['metas','🎯 Metas & Goals']]],['comp','⛓️ Compromissos',[['desafio','⛓️ Desafio'],['contratos','📜 Contratos']]]],rpLast={};
+const RPG=[['plan','🗓️ Planejar',[['planner','🧭 Planejador'],['tarefas','✅ Tarefas'],['plano','🗓️ Plano semanal'],['cal','📅 Calendário'],['planej','🗂️ Matérias']]],['acomp','📈 Acompanhar',[['rel','📈 Resumo'],['hist','📊 Histórico']]],['obj','🎯 Objetivos',[['metas','🎯 Metas & Goals']]],['comp','⛓️ Compromissos',[['desafio','⛓️ Desafio'],['contratos','📜 Contratos']]]],rpLast={};
 function rpTabs(){const g=RPG.find(x=>x[2].some(s=>s[0]===rTab))||RPG[1];rpLast[g[0]]=rTab;
  const top=`<div class="seg" id="rp-tabs" role="group" aria-label="Seção" style="margin:0 0 ${g[2].length>1?8:14}px">${RPG.map(x=>`<button class="${x===g?'on':''}" data-a="rptab" data-v="${rpLast[x[0]]||x[2][0][0]}">${x[1]}</button>`).join('')}</div>`;
  const sub=g[2].length>1?`<div class="seg" id="rp-sub" role="group" aria-label="Subseção" style="margin:0 0 14px">${g[2].map(s=>`<button class="${rTab===s[0]?'on':''}" data-a="rptab" data-v="${s[0]}">${s[1]}</button>`).join('')}</div>`:'';
@@ -375,6 +375,7 @@ function renderRep(){
  if(OBJ.includes(rTab)){objShow();el.innerHTML=tabs;return}
  {const hw=$('#rp-hist');if(hw)hw.hidden=rTab!=='hist'}
  if(rTab==='hist'){el.innerHTML=tabs;return}
+ if(rTab==='tarefas'){el.innerHTML=tabs+tkHtml();return}
  if(rTab==='planner'){el.innerHTML=tabs+pnHtml();return}
  if(rTab==='plano'){el.innerHTML=tabs+planHtml();return}
  const lk=wkKeys(-1)[0];if(rV==='week'&&rOff===-1&&S.repSeen!==lk){S.repSeen=lk;save()}
@@ -547,4 +548,3 @@ $('#rec').onclick=()=>records();
 const save0=save,chkRec=()=>{if(chkRec.b)return;chkRec.b=1;try{records(true);save0()}catch(e){}finally{chkRec.b=0}};
 save=()=>{save0();chkRec()};
 migrate();chkRec();
-
