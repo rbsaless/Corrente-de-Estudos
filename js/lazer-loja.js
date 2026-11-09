@@ -183,12 +183,13 @@ function idLive(){const e=$('#idlive');if(e)e.innerHTML=idState()}
 function idHtml(){
  const d=idCfg(),pl='<p class="sub" style="margin-top:0">Quando o cronômetro de estudo não está ligado (e você não está em rotina nem ocupado/fora), o lazer diminui. Zerou, ele continua negativo e o XP também cai; o nível acompanha o XP.</p>';
  if(!d.on)return`<div class="mgs" id="idsec"><h2>🔻 Cobrança de ociosidade</h2>${pl}<p class="sub">Ao ativar, vale só a partir de agora e o banco de lazer também é ativado.</p><button class="btn main" data-ix="on">Ativar cobrança</button></div>`;
- const rtBox=d.rt?`<p class="sub">${esc(d.rt.n)} em andamento: termina às ${idHM(d.rt.e)} (<b class="lzcd" data-e="${d.rt.e}">${lzClk(d.rt.e-Date.now())}</b>)</p><button class="btn" data-ix="rtx">Encerrar rotina agora</button>`:
+ const rtBox=d.rt?`<p class="sub">${esc(d.rt.n)} em andamento: termina às ${idHM(d.rt.e)} (<b class="lzcd" data-e="${d.rt.e}">${lzClk(d.rt.e-Date.now())}</b>)</p><button class="btn" data-ix="rtx">Encerrar rotina agora</button><p class="sub" style="margin:10px 0 4px">Voltou antes e esqueceu de encerrar? Informe a hora real. O restante até agora é cobrado como ociosidade.</p><div class="mgr"><label>Terminei às<input type="datetime-local" id="rt-x" value="${idDL(Date.now())}"></label></div><button class="btn" data-ix="rtxr">Encerrar com horário retroativo</button>`:
  `<div class="mgr"><label>Rotina<select id="id-n"><option>😴 Dormir</option><option>🍽️ Refeição</option><option>🏋️ Treino</option><option>✏️ Outra</option></select></label><label>Duração (min)<input type="number" id="id-m" min="1" max="1440" placeholder="ex.: 480"></label><label>ou termina às<input type="time" id="id-t"></label></div><button class="btn main" data-ix="rt">Iniciar rotina</button>`;
  return`<div class="mgs" id="idsec"><h2>🔻 Cobrança de ociosidade</h2>${pl}<div class="lzbig" id="idlive" style="font-size:1.1rem">${idState()}</div>
  <div class="mgf"><h3 style="margin:10px 0 4px;font-size:1rem">Rotina com término</h3>${rtBox}
- <h3 style="margin:14px 0 4px;font-size:1rem">Ocupado/Fora</h3><p class="sub" style="margin:0 0 6px">Pausa a cobrança até você voltar.</p><button class="btn" data-ix="aw">${d.aw?'✅ Voltei (encerrar)':'🚶 Estou ocupado/fora'}</button>
+ <h3 style="margin:14px 0 4px;font-size:1rem">Ocupado/Fora</h3><p class="sub" style="margin:0 0 6px">Pausa a cobrança até você voltar.</p><button class="btn" data-ix="aw">${d.aw?'✅ Voltei (encerrar)':'🚶 Estou ocupado/fora'}</button>${d.aw?`<p class="sub" style="margin:10px 0 4px">Esqueceu de clicar? Informe a hora em que você realmente voltou. O tempo entre essa hora e agora é cobrado como ociosidade.</p><div class="mgr"><label>Voltei às<input type="datetime-local" id="aw-x" value="${idDL(Date.now())}"></label></div><button class="btn" data-ix="awx">Encerrar com horário retroativo</button>`:''}
  <h3 style="margin:14px 0 4px;font-size:1rem">Correção retroativa</h3><p class="sub" style="margin:0 0 6px">Devolve o lazer e o XP cobrados nesse intervalo (até 7 dias atrás).</p><div class="mgr"><label>De<input type="datetime-local" id="fx-a"></label><label>Até<input type="datetime-local" id="fx-b"></label></div><button class="btn" data-ix="fix">Corrigir período</button>
+ <h3 style="margin:14px 0 4px;font-size:1rem">Cobrança retroativa</h3><p class="sub" style="margin:0 0 6px">O contrário da correção: cobra lazer e XP de um período passado em que você estava improdutivo, mas a cobrança estava pausada (pausa, rotina ou Ocupado/Fora esquecidos). Até 7 dias atrás. Trechos já cobrados e horários de estudo planejado são pulados automaticamente.</p><div class="mgr"><label>De<input type="datetime-local" id="cr-a"></label><label>Até<input type="datetime-local" id="cr-b"></label><label>Motivo (opcional)<input type="text" id="cr-n" maxlength="60" placeholder="ex.: almoço esquecido"></label></div><button class="btn" data-ix="chg">Cobrar período</button>
  <h3 style="margin:14px 0 4px;font-size:1rem">Ajustes</h3><div class="mgr"><label>Lazer perdido por hora ociosa (min)<input type="number" id="id-lr" min="0" max="600" step="5" value="${d.lr}"></label><label>XP perdido por hora ociosa sem lazer<input type="number" id="id-xr" min="0" max="1000" step="10" value="${d.xr}"></label></div>
  <div class="row"><button class="btn main" data-ix="cfg">Salvar ajustes</button><button class="ghost" data-ix="off">Desativar cobrança</button></div></div></div>`}
 function renderIdle(){idChip();const el=$('#lz');if(!el||curPage!=='lazer')return;const o=$('#idsec');if(o)o.remove();const q=$('#qtsec');if(q)q.remove();el.insertAdjacentHTML('afterbegin',qtHtml()+idHtml())}
@@ -206,6 +207,18 @@ document.addEventListener('click',e=>{
   d.rt={n:nm,s:n,e:end};d.aw=null;d.last=n}
  else if(a==='rtx'){d.rt=null;d.last=n}
  else if(a==='aw'){if(d.aw)d.aw=null;else{if(S.timer){toast('Pause o cronômetro antes.');return}d.aw={s:n};d.rt=null}d.last=n}
+ else if(a==='chg'){const x=new Date(v('cr-a')).getTime(),y=new Date(v('cr-b')).getTime();
+  if(!(x<y)||y>n||x<n-7*864e5){toast('Período inválido. Use datas passadas, até 7 dias atrás, com início antes do fim.');return}
+  const P=idRetro(x,y,'',false);if(!P.n||P.m<1){toast('Nada a cobrar: esse período já foi cobrado ou tinha estudo planejado.');return}
+  const nt=(v('cr-n')||'').trim().slice(0,60);
+  if(!confirm(`Cobrar ${hh(P.m)} como ocioso?\n\nSerão descontados ${lzN(P.lz)} de lazer${P.xp>0?` e ${Math.round(P.xp)} XP`:''}.`))return;
+  const r=idRetro(x,y,nt,true);save();render();toast(`Cobrança retroativa: −${lzN(r.lz)} de lazer${r.xp>0?` e −${Math.round(r.xp)} XP`:''} (${hh(r.m)}).`);return}
+ else if(a==='awx'||a==='rtxr'){const o=a==='awx'?d.aw:d.rt,x0=new Date(v(a==='awx'?'aw-x':'rt-x')).getTime();
+  if(!o||!(x0>=o.s)||x0>n){toast('Horário inválido: precisa ser depois do início ('+(o?idHM(o.s):'')+') e antes de agora.');return}
+  const x=Math.max(x0,n-7*864e5),nm=a==='awx'?'Ocupado/Fora encerrado retroativamente':(o.n||'Rotina')+' encerrada retroativamente',P=idRetro(x,n,'',false);
+  if(P.lz>0||P.xp>0){if(!confirm(`Você voltou às ${idHM(x)}. De lá até agora (${hh(P.m)}) será cobrado como ocioso: −${lzN(P.lz)} de lazer${P.xp>0?` e −${Math.round(P.xp)} XP`:''}. Confirmar?`))return}
+  if(a==='awx')d.aw=null;else d.rt=null;d.last=n;idRetro(x,n,nm,true);
+  toast(P.m>=1?`Encerrado às ${idHM(x)}. Cobrado: ${hh(P.m)} (−${lzN(P.lz)} de lazer).`:'Encerrado.')}
  else if(a==='fix'){const x=new Date(v('fx-a')).getTime(),y=new Date(v('fx-b')).getTime();
   if(!(x<y)||y>n||x<n-7*864e5){toast('Período inválido. Use datas passadas, até 7 dias atrás, com início antes do fim.');return}
   const r=idFix(x,y);save();render();toast((r.rl>0?`Correção: +${lzN(r.rl)} de lazer e +${Math.round(r.rx)} XP devolvidos.`:'Nada foi cobrado de ociosidade nesse período.')+(r.tn?` ☢️ ${r.tn} falha${r.tn>1?'s':''} do Terminal estornada${r.tn>1?'s':''}: +${lzN(r.tl)} de lazer${r.tx>0?' e +'+Math.round(r.tx)+' XP':''}.`:''));return}
@@ -219,6 +232,26 @@ function idFix(a,b){
   if(e<x.b){const g=(x.b-e)/L;out.push({a:e,b:x.b,lz:x.lz*g,xp:x.xp*g,d:x.d})}});
  d.log=out;if(rl>0)lzCfg().led.push({id:lzId(),t:Date.now(),type:'idle',min:Math.round(rl*100)/100,note:'Correção retroativa'});
  const tf=window.__lsRefund?window.__lsRefund(a,b):{n:0,lz:0,xp:0};return{rl,rx,tn:tf.n,tl:tf.lz,tx:tf.xp}}
+/* ===== Cobrança retroativa de ociosidade =====
+   Inverso do idFix: cobra lazer e XP de um período passado. Grava no mesmo lugar que a cobrança normal
+   (ledger tipo 'idle', ajuste de XP 'idle' do dia e d.log), então tudo que já lê isso (saldo, XP/nível, Estatísticas,
+   Correção retroativa, Terminal Dharma, Lumi) enxerga o lançamento sem mudança. */
+const idDL=t=>{const q=new Date(t);return fmt(q)+'T'+p2(q.getHours())+':'+p2(q.getMinutes())};
+function idSegs(a,b){const d=idCfg();let cut=d.log.map(x=>[x.a,x.b]);
+ S.subjects.forEach(s=>(s.sessions||[]).forEach(q=>{if(!q[2])cut.push([+new Date(q[0]),+new Date(q[1])])}));
+ if(S.timer&&!S.timer.unp)cut.push([S.timer.start,Date.now()]);
+ cut=cut.filter(c=>c[1]>a&&c[0]<b).sort((x,y)=>x[0]-y[0]);
+ const segs=[];let c=a;cut.forEach(([s,e])=>{if(s>c)segs.push([c,Math.min(s,b)]);c=Math.max(c,e)});if(c<b)segs.push([c,b]);
+ const out=[];segs.forEach(([s,e])=>{while(s<e){const nx=new Date(s);nx.setHours(24,0,0,0);const m=Math.min(+nx,e);if(m-s>=6e4)out.push([s,m]);s=m}});return out}
+function idRetro(a,b,note,apply){const d=idCfg(),segs=idSegs(a,b);let bal=lzBal(),xcap=Math.max(0,xpRun().xp);const T={m:0,lz:0,xp:0,n:segs.length};
+ segs.forEach(([s,e])=>{const m=(e-s)/6e4,lz=m*d.lr/60,over=lz-Math.max(0,bal);let mo=0;if(d.lr>0){if(over>0)mo=Math.min(m,over*60/d.lr)}else if(bal<=0)mo=m;
+  const xp=Math.max(0,Math.min(mo*d.xr/60,xcap));T.m+=m;T.lz+=lz;T.xp+=xp;bal-=lz;xcap-=xp;if(!apply)return;
+  const day=fmt(new Date(s));
+  if(lz>0)lzCfg().led.push({id:lzId(),t:e,type:'idle',min:-Math.round(lz*1000)/1000,d:day,note:'Ociosidade retroativa · '+br(day)+' '+idHM(s)+'–'+idHM(e)+(note?' · '+note:'')});
+  if(xp>0){const adj=chCfg().adj;let x=adj.find(y=>y.idle&&y.d===day);if(!x){x={d:day,v:0,idle:1};adj.push(x)}x.v=Math.round((x.v-xp)*1000)/1000}
+  d.log.push({a:s,b:e,lz,xp,d:day,r:1})});
+ if(apply){d.log.sort((x,y)=>x.a-y.a);const lim=Date.now()-7*864e5;d.log=d.log.filter(x=>x.b>lim)}
+ return T}
 setInterval(()=>idTick(),15000);setTimeout(()=>{idTick();renderIdle()},600);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)idTick()});
 
@@ -348,5 +381,3 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-sp]');if(!
   if(!(v>=30)){toast('O mínimo da streak é de 30 minutos.');return}if(v===cur)return;
   if(v<cur){if(k.lw<=0){toast('Para diminuir, compre "Reduzir mínimo da streak" na loja.');return}k.lw--}
   k.hist=k.hist.filter(x=>x.from!==t).concat({from:t,min:v});save();render();toast(`Mínimo da streak: ${hh(v)} por dia, a partir de hoje.`)}});
-
-
