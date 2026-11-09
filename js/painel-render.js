@@ -10,11 +10,11 @@ function dayTop(){
  const st=S.subjects.filter(s=>calSel in s.days).map(s=>esc(s.name)+(s.days[calSel]?` (${s.days[calSel]} min)`:'')).join(', ');
  const rows=D.map(o=>taskRow(o.s,o.x,false)).join('');
  const A=S.subjects.filter(s=>!s.arch),cs=A.some(s=>s.id===calSub)?calSub:(A[0]||{}).id;
- const form=A.length?`<div class='tf2'><div class='tf-main'><input type='text' id='cd-n' placeholder='＋ Nova tarefa para este dia' maxlength='80' aria-label='Nova tarefa'><select id='cd-s' aria-label='Matéria'>${A.map(s=>`<option value='${s.id}'${s.id===cs?' selected':''}>${esc(s.name)}</option>`).join('')}</select><button class='btn main' data-a='cadd'>Adicionar</button></div><div class='tf-opt'><label class='ck2'><input type='checkbox' id='cd-d'${calSel<t?' checked':''}> Já concluída</label><label class='ck2'><input type='checkbox' id='cd-x'> 📝 Prova</label><button type='button' class='ghost' data-tk='new'>Mais opções…</button></div></div>`:`<p class='sub'>Adicione uma matéria ativa para planejar tarefas nos dias.</p>`;
+ const form=A.length?`<div class='tform'><select id='cd-s' aria-label='Matéria'>${A.map(s=>`<option value='${s.id}'${s.id===cs?' selected':''}>${esc(s.name)}</option>`).join('')}</select><input type='text' id='cd-n' placeholder='Nova tarefa para este dia' maxlength='80' aria-label='Nova tarefa'><label class='sub' style='display:flex;align-items:center;gap:6px;margin:0'><input type='checkbox' id='cd-d'${calSel<t?' checked':''}> Já concluída</label><label class='sub' style='display:flex;align-items:center;gap:6px;margin:0'><input type='checkbox' id='cd-x'> 📝 Prova</label><button class='btn main' data-a='cadd'>Adicionar</button></div>`:`<p class='sub'>Adicione uma matéria ativa para planejar tarefas nos dias.</p>`;
  return`<div class='dp top'><div class='dpt'><h3>${title}${calSel===t?' (hoje)':''}</h3><div><button class='btn' data-a='dnav' data-v='-1' aria-label='Dia anterior'>‹</button><button class='btn' data-a='dnav' data-v='0'>Hoje</button><button class='btn' data-a='dnav' data-v='1' aria-label='Próximo dia'>›</button></div></div>
  ${D.length?`<p class='sub'>${D.length} tarefa${pl(D.length)}, ${dn} concluída${pl(dn)}</p>`:`<p class='sub'>Nenhuma tarefa neste dia.</p>`}
  ${st?`<p class='sub'>🔥 Estudado: ${st}</p>`:''}${ends.join('')}
- ${form}<div class='tl'>${rows}</div>${rvDay(calSel)}</div>`}
+ <div class='tl'>${rows}</div>${rvDay(calSel)}${form}</div>`}
 let dsOpen=false;
 function dayStudy(){
  const t=fmt(now());if(calSel>t||!S.subjects.length)return'';
@@ -467,3 +467,4 @@ const yl=y=>+y%4===0&&(+y%100!==0||+y%400===0)?366:365,YR=[...new Set(ks.map(k=>
  <h3>Comparativo ano a ano</h3>${ul(YR.slice().reverse().map(y=>{const pos=YR.slice().sort((a,b)=>YM[b]-YM[a]).indexOf(y);return `${['🥇','🥈','🥉'][pos]||(pos+1)+'º'} <b>${y}</b> · ${hh(YM[y])} · ${YD[y]} dias (${Math.round(YD[y]/YL[y]*100)}%) · ${hh(YM[y]/YL[y])}/dia · streak ${YS[y]?YS[y][0]:0}${YB[y]?' · '+YB[y]+' blocos':''}`}))}<p class="sub">Medalha = classificação do ano por tempo total.</p></div>
  <div><h3>Galeria de conquistas</h3>${gal}</div>`;
  if(!$('#dlg').open)$('#dlg').showModal()}
+
