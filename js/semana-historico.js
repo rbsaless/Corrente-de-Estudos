@@ -153,10 +153,10 @@ function openTask(sid,tid,day,time){
  <div class='tq-g'><span class='tq-l'>Quando</span><div class='tq-r'>${qd('Hoje','0')}${qd('Amanhã','1')}${qd('Em 1 semana','7')}${qd('Sem data','')}</div><div class='r2'><label>Dia<input type='date' id='td-d' value='${x.date||''}'></label><label>Início (opcional)<input type='time' id='td-t' value='${x.time||''}'></label></div></div>
  <div class='tq-g'><span class='tq-l'>Duração</span><div class='tq-r'>${[15,30,45,60,90,120].map(qu).join('')}</div><label>Outro valor (min)<input type='number' id='td-u' min='15' max='1440' step='5' value='${dur0}'></label></div>
  <label>Prioridade<select id='td-p'>${Object.entries(PR).map(([k,l])=>`<option value='${k}'${x.prio===k?' selected':''}>${l}</option>`).join('')}</select></label>
- <details class='td-more'${(x.est||x.note||x.exam)?' open':''}><summary>Mais opções</summary>
+ <details class='td-more'${(x.est||x.note||x.exam||x.rv)?' open':''}><summary>Mais opções</summary>
   <label>⏱ Tempo da tarefa (min)<input type='number' id='td-e' min='0' max='1440' step='5' placeholder='0' value='${x.est||''}'></label>
   <label>Anotações<textarea id='td-o' rows='2' maxlength='400' placeholder='Resumo, dúvidas, links...'>${esc(x.note||'')}</textarea></label>
-  <label class='ck'><input type='checkbox' id='td-x'${x.exam?' checked':''}> 📝 Prova (gera contagem regressiva)</label></details>
+  <label class='ck'><input type='checkbox' id='td-x'${x.exam?' checked':''}> 📝 Prova (gera contagem regressiva)</label><label class='ck'><input type='checkbox' id='td-rv'${x.rv?' checked':''}> 🔁 Revisão espaçada (1, 3, 7 e 21 dias após concluir)</label></details>
  ${o?`<label class='ck'><input type='checkbox' id='td-c'${x.done?' checked':''}> Concluída</label>`:''}
  <div class='row'>${o?`<button class='btn danger' data-w='del'>Excluir</button>`:'<span></span>'}<span><button class='btn' data-w='close'>Cancelar</button> <button class='btn main' data-w='save'>Salvar</button></span></div>`;
  if(!$('#tdlg').open)$('#tdlg').showModal();
@@ -177,7 +177,7 @@ $('#tdlg').addEventListener('click',e=>{
   if(o){x=o.x;if(ns&&ns!==o.s){o.s.topics=o.s.topics.filter(y=>y!==x);(ns.topics=ns.topics||[]).push(x)}}
   else{x={id:'t'+Date.now().toString(36),name:n,date,prio:'media',est:0,done:false,doneAt:'',note:''};(ns.topics=ns.topics||[]).push(x);calSub=ns.id}
   if($('#td-x').checked&&!date){toast('Escolha o dia da prova.');return}
-  x.name=n;x.date=date;x.time=time;x.prio=$('#td-p').value;if($('#td-x').checked)x.exam=true;else delete x.exam;
+  x.name=n;x.date=date;x.time=time;x.prio=$('#td-p').value;if($('#td-x').checked)x.exam=true;else delete x.exam;if($('#td-rv').checked&&!x.exam)x.rv=true;else{delete x.rv;unsched(x)}
   x.est=Math.max(0,Math.min(1440,parseInt($('#td-e').value)||0));x.note=$('#td-o').value.trim();
   if(time||x.dur||!o)x.dur=dur;
   if(!time&&!o)delete x.time;
