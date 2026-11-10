@@ -16,29 +16,29 @@
 <div class="wrap">
 <div id="home">
 <header>
- <div>
-  <h1>Corrente de Estudos</h1>
-  <div class="lvl" id="lvl"></div>
-  <div class="gst" id="gst"></div>
-  <div class="today" id="today"></div>
-  <div class="lzb" id="lzb"></div>
-  <p class="sub" id="sum"></p>
- </div>
- <div class="tools">
-  <button class="btn" id="theme" title="Alternar tema">🌓 Tema</button>
-  <button class="btn" id="rec">🏆 Recordes</button>
-  <button class="btn" data-a="nav" data-p="relatorio">📈 Relatório e Planejamento</button>
-  <button class="btn" data-a="nav" data-p="lazer">⏳ Banco de lazer</button>
- <button class="btn" id="lg-btn" data-a="nav" data-p="ligas">🏅 Ligas</button>
-  <button class="btn" data-a="nav" data-p="loja">🛒 Loja</button>
-  <button class="btn" data-a="nav" data-p="lost">☢️ Terminal Lost</button>
-  <button class="btn" data-a="nav" data-p="lumi"><span id="lm-ico" style="display:inline-flex;vertical-align:middle;margin-right:6px"></span>Lumi<span id="lm-bd" class="lm-bd" hidden></span></button>
-  <button class="btn" data-a="nav" data-p="lumiia"><span id="lia-ico" style="display:inline-flex;vertical-align:middle;margin-right:6px"></span>Lumi IA</button>
-  <button class="btn" data-a="nav" data-p="feed">💡 Feed &amp; Coach</button> <!-- NOVO v20 -->
-  <button class="btn" id="exp">Exportar backup</button>
-  <button class="btn" id="imp">Importar backup</button>
-  <input type="file" id="file" accept=".json" hidden>
- </div>
+ <div>
+  <h1>Corrente de Estudos</h1>
+  <div class="lvl" id="lvl"></div>
+  <div class="gst" id="gst"></div>
+  <div class="today" id="today"></div>
+  <div class="lzb" id="lzb"></div>
+  <p class="sub" id="sum"></p>
+ </div>
+ <div class="tools">
+  <button class="btn" id="theme" title="Alternar tema">🌓 Tema</button>
+  <button class="btn" id="rec">🏆 Recordes</button>
+  <button class="btn" data-a="nav" data-p="relatorio">📈 Relatório e Planejamento</button>
+  <button class="btn" data-a="nav" data-p="lazer">⏳ Banco de lazer</button>
+ <button class="btn" id="lg-btn" data-a="nav" data-p="ligas">🏅 Ligas</button>
+  <button class="btn" data-a="nav" data-p="loja">🛒 Loja</button>
+  <button class="btn" data-a="nav" data-p="lost">☢️ Terminal Lost</button>
+  <button class="btn" data-a="nav" data-p="lumi"><span id="lm-ico" style="display:inline-flex;vertical-align:middle;margin-right:6px"></span>Lumi<span id="lm-bd" class="lm-bd" hidden></span></button>
+  <button class="btn" data-a="nav" data-p="lumiia"><span id="lia-ico" style="display:inline-flex;vertical-align:middle;margin-right:6px"></span>Lumi IA</button>
+  <button class="btn" data-a="nav" data-p="feed">💡 Feed &amp; Coach</button> <!-- NOVO v20 -->
+  <button class="btn" id="exp">Exportar backup</button>
+  <button class="btn" id="imp">Importar backup</button>
+  <input type="file" id="file" accept=".json" hidden>
+ </div>
 </header>
 <div class="add" id="tm" hidden></div>
 <div id="lzp"></div>
@@ -46,88 +46,87 @@
 <div id="panel"></div>
 
 
-
 <div id="htk"></div>
 
 </div>
 
 <div class="page" id="pg-relatorio" hidden>
- <div class="ptop"><button class="btn" data-a="back" aria-label="Voltar para a tela inicial">← Início</button><h1 id="rph">📈 Relatório e Planejamento</h1></div>
- <section id="rp" aria-label="Relatório semanal"></section>
+ <div class="ptop"><button class="btn" data-a="back" aria-label="Voltar para a tela inicial">← Início</button><h1 id="rph">📈 Relatório e Planejamento</h1></div>
+ <section id="rp" aria-label="Relatório semanal"></section>
 <div id="rp-subj" hidden>
 <div class="add" role="group" aria-label="Nova matéria">
- <input type="text" id="name" placeholder="Nova matéria (ex.: Inglês, Python)" maxlength="40" aria-label="Nome da matéria">
- 
- <div class="sw" id="sw"></div>
- <button class="btn main" id="addBtn">Adicionar</button>
+ <input type="text" id="name" placeholder="Nova matéria (ex.: Inglês, Python)" maxlength="40" aria-label="Nome da matéria">
+ 
+ <div class="sw" id="sw"></div>
+ <button class="btn main" id="addBtn">Adicionar</button>
 </div>
- <div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px"><button class="btn" id="arq" hidden></button><button class="btn" id="nimp" hidden></button></div>
- <main class="grid" id="grid"></main>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px"><button class="btn" id="arq" hidden></button><button class="btn" id="nimp" hidden></button></div>
+ <main class="grid" id="grid"></main>
 </div>
 <div id="rp-cal" hidden>
- <div id="rvc"></div>
- <section class='cal' id='cal' aria-label='Calendário'></section>
+ <div id="rvc"></div>
+ <section class='cal' id='cal' aria-label='Calendário'></section>
 </div>
 <div id="rp-obj" hidden>
- <div id="obj-metas" hidden><section id="mg" aria-label="Metas e goals"></section></div>
- <div id="obj-desafio" hidden><section id="ch" aria-label="Sobrevivência da Corrente"></section></div>
- <div id="obj-contratos" hidden><section id="cf-page" aria-label="Contratos de Foco e Modo Tudo ou Nada"></section></div>
+ <div id="obj-metas" hidden><section id="mg" aria-label="Metas e goals"></section></div>
+ <div id="obj-desafio" hidden><section id="ch" aria-label="Sobrevivência da Corrente"></section></div>
+ <div id="obj-contratos" hidden><section id="cf-page" aria-label="Contratos de Foco e Modo Tudo ou Nada"></section></div>
 </div>
 <div id="rp-hist" hidden>
- <section class='cal' id='dd' aria-label='Feitas do dia' style='margin-bottom:20px'></section>
- <section class='cal' id='hist' aria-label='Histórico de estudos'></section>
- <section class='cal' id='fc' aria-label='Foco e concentração' style='margin-top:20px'></section>
+ <section class='cal' id='dd' aria-label='Feitas do dia' style='margin-bottom:20px'></section>
+ <section class='cal' id='hist' aria-label='Histórico de estudos'></section>
+ <section class='cal' id='fc' aria-label='Foco e concentração' style='margin-top:20px'></section>
 </div>
 </div>
 
 <div class="page" id="pg-lazer" hidden>
- <div class="ptop"><button class="btn" data-a="back" aria-label="Voltar para a tela inicial">← Início</button><h1>⏳ Banco de lazer</h1></div>
- <div class="tabs" id="lztabs" role="tablist" aria-label="Seções do banco de lazer" style="margin-bottom:16px"><button type="button" role="tab" data-lzt="bank" class="on">⏳ Banco</button><button type="button" role="tab" data-lzt="st">📊 Estatísticas</button></div>
- <section id="lz" aria-label="Banco de tempo de lazer"></section>
- <section id="lzst" aria-label="Estatísticas do banco de lazer" hidden></section>
+ <div class="ptop"><button class="btn" data-a="back" aria-label="Voltar para a tela inicial">← Início</button><h1>⏳ Banco de lazer</h1></div>
+ <div class="tabs" id="lztabs" role="tablist" aria-label="Seções do banco de lazer" style="margin-bottom:16px"><button type="button" role="tab" data-lzt="bank" class="on">⏳ Banco</button><button type="button" role="tab" data-lzt="st">📊 Estatísticas</button></div>
+ <section id="lz" aria-label="Banco de tempo de lazer"></section>
+ <section id="lzst" aria-label="Estatísticas do banco de lazer" hidden></section>
 </div>
 
 <div class="page" id="pg-ligas" hidden>
- <div class="ptop"><button class="btn" data-a="back" aria-label="Voltar para a tela inicial">← Início</button><h1>🏅 Ligas semanais</h1></div>
- <section id="lg" aria-label="Ligas semanais"></section>
+ <div class="ptop"><button class="btn" data-a="back" aria-label="Voltar para a tela inicial">← Início</button><h1>🏅 Ligas semanais</h1></div>
+ <section id="lg" aria-label="Ligas semanais"></section>
 </div>
 
 <div class="page" id="pg-loja" hidden>
- <div class="ptop"><button class="btn" data-a="back" aria-label="Voltar para a tela inicial">← Início</button><h1>🛒 Loja</h1></div>
- <section id="shp" aria-label="Loja e streak"></section>
+ <div class="ptop"><button class="btn" data-a="back" aria-label="Voltar para a tela inicial">← Início</button><h1>🛒 Loja</h1></div>
+ <section id="shp" aria-label="Loja e streak"></section>
 </div>
 
 
 <div class="page" id="pg-lost" hidden>
- <div class="ptop"><button class="btn" data-a="back" aria-label="Voltar para a tela inicial">← Início</button><h1>☢️ Terminal — Iniciativa Dharma</h1></div>
- <div class="ls-clock" id="ls-clock" role="timer" aria-live="off"><div class="ls-grp" id="ls-m"></div><div class="ls-sep"></div><div class="ls-grp" id="ls-s"></div></div>
- <div class="ls-pc"><div class="ls-body"><div class="ls-scr" id="ls-scr"></div><input id="ls-in" type="text" inputmode="text" autocomplete="off" aria-label="Digite o código" style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none"><div class="ls-side"><div class="ls-vent"></div><div class="ls-st" id="ls-st"></div><div class="ls-ctl"><i class="ls-knob"></i><i class="ls-led"></i><i class="ls-sw"></i></div></div></div>
- <div class="ls-key"><button class="ls-btn ex" id="ls-ex" type="button">EXECUTE</button><button class="ls-btn" id="ls-on" type="button"></button><button class="ls-btn" id="ls-mu" type="button" aria-label="Som"></button><button class="ls-btn" id="ls-ts" type="button">⏱ TESTE (5 MIN)</button><button class="ls-btn" id="ls-t1" type="button">⏱ TESTE (1 MIN)</button></div></div>
- <p class="ls-info" id="ls-info"></p>
- <details class="ls-info"><summary>🎵 Sons personalizados (da série)</summary><p>Escolha seus próprios arquivos de áudio. Ficam salvos neste navegador.</p><p>Som ambiente (em loop) <input type="file" accept="audio/*" data-ls="amb"></p><p>Contagem final (4 min) <input type="file" accept="audio/*" data-ls="cd"></p><p>Alarme de falha <input type="file" accept="audio/*" data-ls="alarm"></p><p>Ao apertar EXECUTE <input type="file" accept="audio/*" data-ls="exec"></p><p><button class="ls-btn" id="ls-rs" type="button">Voltar aos sons padrão</button></p></details>
+ <div class="ptop"><button class="btn" data-a="back" aria-label="Voltar para a tela inicial">← Início</button><h1>☢️ Terminal — Iniciativa Dharma</h1></div>
+ <div class="ls-clock" id="ls-clock" role="timer" aria-live="off"><div class="ls-grp" id="ls-m"></div><div class="ls-sep"></div><div class="ls-grp" id="ls-s"></div></div>
+ <div class="ls-pc"><div class="ls-body"><div class="ls-scr" id="ls-scr"></div><input id="ls-in" type="text" inputmode="text" autocomplete="off" aria-label="Digite o código" style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none"><div class="ls-side"><div class="ls-vent"></div><div class="ls-st" id="ls-st"></div><div class="ls-ctl"><i class="ls-knob"></i><i class="ls-led"></i><i class="ls-sw"></i></div></div></div>
+ <div class="ls-key"><button class="ls-btn ex" id="ls-ex" type="button">EXECUTE</button><button class="ls-btn" id="ls-on" type="button"></button><button class="ls-btn" id="ls-mu" type="button" aria-label="Som"></button><button class="ls-btn" id="ls-ts" type="button">⏱ TESTE (5 MIN)</button><button class="ls-btn" id="ls-t1" type="button">⏱ TESTE (1 MIN)</button></div></div>
+ <p class="ls-info" id="ls-info"></p>
+ <details class="ls-info"><summary>🎵 Sons personalizados (da série)</summary><p>Escolha seus próprios arquivos de áudio. Ficam salvos neste navegador.</p><p>Som ambiente (em loop) <input type="file" accept="audio/*" data-ls="amb"></p><p>Contagem final (4 min) <input type="file" accept="audio/*" data-ls="cd"></p><p>Alarme de falha <input type="file" accept="audio/*" data-ls="alarm"></p><p>Ao apertar EXECUTE <input type="file" accept="audio/*" data-ls="exec"></p><p><button class="ls-btn" id="ls-rs" type="button">Voltar aos sons padrão</button></p></details>
 </div>
 <div class="page" id="pg-lumiia" hidden>
- <div class="ptop"><button class="btn" data-a="back" aria-label="Voltar para a tela inicial">← Início</button><h1><span id="lia-ico2" style="display:inline-flex;vertical-align:middle;margin-right:8px"></span>Lumi IA</h1></div>
- <div class="lm-hd"><div class="lm-face" id="lia-face"></div><div><h2>Lumi IA</h2><small>Sua treinadora com inteligência artificial</small></div></div>
- <section id="lia" aria-label="Lumi IA"></section>
+ <div class="ptop"><button class="btn" data-a="back" aria-label="Voltar para a tela inicial">← Início</button><h1><span id="lia-ico2" style="display:inline-flex;vertical-align:middle;margin-right:8px"></span>Lumi IA</h1></div>
+ <div class="lm-hd"><div class="lm-face" id="lia-face"></div><div><h2>Lumi IA</h2><small>Sua treinadora com inteligência artificial</small></div></div>
+ <section id="lia" aria-label="Lumi IA"></section>
 </div>
 
 <div class="page" id="pg-lumi" hidden>
- <div class="ptop"><button class="btn" data-a="back" aria-label="Voltar para a tela inicial">← Início</button><h1><span id="lm-ico2" style="display:inline-flex;vertical-align:middle;margin-right:8px"></span>Lumi</h1></div>
- <div class="lm-hd"><div class="lm-face" id="lm-face"></div><div><h2>Lumi</h2><small id="lm-sub">Sua treinadora de estudo</small></div></div>
- <p class="lm-st" id="lm-st"></p>
- <details id="lm-ald" open style="margin:0 0 12px"><summary style="cursor:pointer;font-weight:700">🔔 Alertas da Lumi</summary><div id="lm-al" style="margin-top:8px"></div></details>
- <details id="lm-insd" open style="margin:0 0 12px"><summary style="cursor:pointer;font-weight:700">🔬 Raio-X dos seus dados</summary><div id="lm-ins" style="margin-top:8px"></div></details>
- <div class="lm-log" id="lm-log" aria-live="polite"></div>
- <div class="lm-ch" id="lm-ch"></div>
- <details id="lm-more" style="margin:0 0 10px"><summary style="cursor:pointer">💡 Mais perguntas e planos</summary><div id="lm-moreb"></div></details>
- <div class="lm-in"><input type="text" id="lm-i" maxlength="300" placeholder="Fale com a Lumi: como você está?" autocomplete="off"><button class="btn main" id="lm-s" type="button">Enviar</button></div>
- <details style="margin-top:12px;opacity:.8"><summary>Frases que a Lumi não entendeu</summary><div id="lm-u" style="font-size:.85rem;margin-top:6px"></div></details>
+ <div class="ptop"><button class="btn" data-a="back" aria-label="Voltar para a tela inicial">← Início</button><h1><span id="lm-ico2" style="display:inline-flex;vertical-align:middle;margin-right:8px"></span>Lumi</h1></div>
+ <div class="lm-hd"><div class="lm-face" id="lm-face"></div><div><h2>Lumi</h2><small id="lm-sub">Sua treinadora de estudo</small></div></div>
+ <p class="lm-st" id="lm-st"></p>
+ <details id="lm-ald" open style="margin:0 0 12px"><summary style="cursor:pointer;font-weight:700">🔔 Alertas da Lumi</summary><div id="lm-al" style="margin-top:8px"></div></details>
+ <details id="lm-insd" open style="margin:0 0 12px"><summary style="cursor:pointer;font-weight:700">🔬 Raio-X dos seus dados</summary><div id="lm-ins" style="margin-top:8px"></div></details>
+ <div class="lm-log" id="lm-log" aria-live="polite"></div>
+ <div class="lm-ch" id="lm-ch"></div>
+ <details id="lm-more" style="margin:0 0 10px"><summary style="cursor:pointer">💡 Mais perguntas e planos</summary><div id="lm-moreb"></div></details>
+ <div class="lm-in"><input type="text" id="lm-i" maxlength="300" placeholder="Fale com a Lumi: como você está?" autocomplete="off"><button class="btn main" id="lm-s" type="button">Enviar</button></div>
+ <details style="margin-top:12px;opacity:.8"><summary>Frases que a Lumi não entendeu</summary><div id="lm-u" style="font-size:.85rem;margin-top:6px"></div></details>
 </div>
 <div class="page" id="pg-feed" hidden> <!-- NOVO v20 -->
- <div class="ptop"><button class="btn" data-a="back" aria-label="Voltar para a tela inicial">← Início</button><h1>💡 Feed &amp; Coach</h1></div>
- <section id="coach-sec" aria-label="Coach de estudos"></section>
- <section id="feed-sec" aria-label="Feed contínuo de aprendizados"></section>
+ <div class="ptop"><button class="btn" data-a="back" aria-label="Voltar para a tela inicial">← Início</button><h1>💡 Feed &amp; Coach</h1></div>
+ <section id="coach-sec" aria-label="Coach de estudos"></section>
+ <section id="feed-sec" aria-label="Feed contínuo de aprendizados"></section>
 </div>
 </div>
 
@@ -153,6 +152,7 @@
 <!-- COLOQUE O LOJA-V2 AQUI (logo após ligas.js e antes de lumi.js) -->
 <script src="js/loja-v2.js"></script>
 <!-- NOVO BRAÇO DA APLICAÇÃO: ÁREA DA FACULDADE -->
+<script src="js/faculdade.js"></script>
 <script src="js/lumi.js"></script>
 <script src="js/lostaudio.js"></script>
 <script src="js/lumi-ia.js" defer></script>
