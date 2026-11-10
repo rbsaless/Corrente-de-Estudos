@@ -31,12 +31,12 @@ const falInfo=m=>{const lim=+m.aulas>0?Math.floor(m.aulas*.25):null,fal=+m.fal||
 
 /* ---------- planejamento por semestre ---------- */
 function plan(f){const cur=curIdx(),fim=parseSem(f.fim),M=f.mats,by={};M.forEach(m=>by[m.id]=m);
- const P=M.filter(m=>!m.ok),end=fim!=null?Math.max(fim,cur):cur+12,kids={};
+ const P=M.filter(m=>!m.ok&&m.tipo!=='proj'),end=fim!=null?Math.max(fim,cur):cur+12,kids={};
  P.forEach(m=>m.dep.forEach(d=>{if(by[d]&&!by[d].ok)(kids[d]=kids[d]||[]).push(m.id)}));
  const desc=id=>{const s=new Set(),st=[id];while(st.length){const x=st.pop();(kids[x]||[]).forEach(k=>{if(!s.has(k)){s.add(k);st.push(k)}})}return s.size};
  const off=m=>{let n=0;for(let i=cur;i<=end;i++)if(offered(m,i))n++;return n};
  const info={};P.forEach(m=>info[m.id]={d:desc(m.id),o:off(m)});
- const sc=m=>(m.foco?100:0)+(m.cur?50:0)+info[m.id].d*10+(10-Math.min(10,info[m.id].o));
+ const sc=m=>(m.foco?100:0)+(m.cur?50:0)+(info[m.id]?info[m.id].d*10+(10-Math.min(10,info[m.id].o)):0);
  const sem={},cnt={},list={};
  P.filter(m=>m.cur).forEach(m=>{sem[m.id]=cur;cnt[cur]=(cnt[cur]||0)+1});
  for(let i=cur;i<=end;i++){
@@ -53,7 +53,7 @@ const wkMin=m=>{const s=subj(m);if(!s)return null;let a=0;for(let i=0;i<7;i++)a+
 function why(m,P){const i=P.info[m.id]||{d:0,o:0},w=[];
  if(m.foco)w.push('🎯 é seu foco do semestre');else if(m.cur)w.push('você está cursando');
  if(i.d>0)w.push('é pré-requisito de '+i.d+' matéria'+(i.d>1?'s':''));
- if(!(m.id in P.sem))w.push('não cabe no prazo');else if(i.o<=2)w.push('só '+i.o+' oferta'+(i.o===1?'':'s')+' até o prazo');
+ if(m.tipo==='proj'){if(m.dl&&!m.ok){const n=diff(fmt(now()),m.dl);w.push(n<0?'prazo do projeto já passou':'prazo do projeto em '+n+' dia'+(n===1?'':'s'))}}else if(!(m.id in P.sem))w.push('não cabe no prazo');else if(i.o<=2)w.push('só '+i.o+' oferta'+(i.o===1?'':'s')+' até o prazo');
  if(gRisk(gInfo(m))==='hi')w.push('a nota exigida nas avaliações restantes é alta');
  return w}
 
@@ -62,7 +62,7 @@ function boost(s){const f=F(),m=f.mats.find(x=>x.sid===s.id&&!x.ok);if(!m)return
  const P=getPlan(),i=P.info[m.id]||{d:0},w=[];let k=1;
  if(m.foco){k*=1.8;w.push('🎯 foco da faculdade')}else if(m.cur){k*=1.4;w.push('cursando na faculdade')}
  if(i.d>0){k*=1+Math.min(.5,.15*i.d);w.push('trava '+i.d+' matéria'+(i.d>1?'s':'')+' da faculdade')}
- if(!(m.id in P.sem)){k*=1.3;w.push('não cabe no prazo da faculdade')}
+ if(m.tipo!=='proj'&&!(m.id in P.sem)){k*=1.3;w.push('não cabe no prazo da faculdade')}
  if(gRisk(gInfo(m))==='hi'){k*=1.25;w.push('nota mínima exige muito')}
  return{m:k,why:w.join(' · ')}}
 const _sf=subjFactor;
@@ -81,23 +81,24 @@ function alerts(){const f=F(),P=getPlan(),A=[],t0=fmt(now());
   const g=gInfo(m),r=gRisk(g);if(r==='hi'||r==='no')A.push({id:'fac-nota'+m.id,sev:r==='no'?3:2,ic:'📝',t:m.nome+': '+(r==='no'?'nota mínima fora de alcance':'nota exigida alta'),d:gTxt(g).replace(/<\/?b>/g,''),act:ask});
   const fi=falInfo(m);if(fi&&fi.fal>=Math.ceil(fi.lim*.8))A.push({id:'fac-fal'+m.id,sev:fi.left<=0?3:2,ic:'🪑',t:m.nome+': '+(fi.left<=0?'limite de faltas estourado':'poucas faltas restantes'),d:fi.fal+' de '+fi.lim+' faltas permitidas.',act:null});
   m.ent.filter(e=>!e.ok&&e.dt&&diff(t0,e.dt)>=0&&diff(t0,e.dt)<=7).forEach(e=>A.push({id:'fac-ent'+e.id,sev:2,ic:'📌',t:e.n+' ('+m.nome+') em '+diff(t0,e.dt)+' dia'+(diff(t0,e.dt)===1?'':'s'),d:'Entrega da faculdade.',act:null}))});
+ f.mats.filter(m=>m.tipo==='proj'&&!m.ok&&m.dl).forEach(m=>{const n=diff(t0,m.dl);if(n<=14)A.push({id:'fac-dl'+m.id,sev:n<=3?3:2,ic:'🧪',t:m.nome+(n<0?' passou do prazo':' tem prazo em '+n+' dia'+(n===1?'':'s')),d:'Projeto da faculdade.',act:null})});
  return A.slice(0,5)}
-function brief(){const f=F();if(!f.mats.length&&!f.fim)return'';const P=getPlan(),pend=f.mats.filter(m=>!m.ok).length,fc=f.mats.filter(m=>m.foco&&!m.ok).map(m=>m.nome);
- return'• Faculdade: '+(f.fim?'até '+f.fim+' · ':'')+pend+' pendente'+(pend===1?'':'s')+' · '+RK[P.risk][1].toLowerCase()+(fc.length?' · foco: '+fc.join(', '):'')}
+function brief(){const f=F();if(!f.mats.length&&!f.fim)return'';const P=getPlan(),pend=f.mats.filter(m=>!m.ok&&m.tipo!=='proj').length,pj=f.mats.filter(m=>!m.ok&&m.tipo==='proj').length,fc=f.mats.filter(m=>m.foco&&!m.ok).map(m=>m.nome);
+ return'• Faculdade: '+(f.fim?'até '+f.fim+' · ':'')+pend+' pendente'+(pend===1?'':'s')+(pj?' + '+pj+' projeto'+(pj>1?'s':''):'')+' · '+RK[P.risk][1].toLowerCase()+(fc.length?' · foco: '+fc.join(', '):'')}
 function answer(){const f=F(),P=getPlan();if(!f.mats.length&&!f.fim)return{t:'Você ainda não cadastrou nada na Faculdade. Abra o botão 🎓 Faculdade, defina o semestre final e marque as matérias.',m:'care'};
- const L=[],pend=f.mats.filter(m=>!m.ok),ok=f.mats.filter(m=>m.ok),left=P.fim!=null?Math.max(0,P.fim-P.cur+1):null;
+ const L=[],pend=f.mats.filter(m=>!m.ok&&m.tipo!=='proj'),ok=f.mats.filter(m=>m.ok&&m.tipo!=='proj'),left=P.fim!=null?Math.max(0,P.fim-P.cur+1):null;
  L.push('🎓 Faculdade · agora '+lbl(P.cur)+(f.fim?' · fim em '+f.fim+' ('+left+' semestre'+(left===1?'':'s')+', contando o atual)':'')+(f.dataFim?' · data final '+bd(f.dataFim):''));
  L.push(RK[P.risk][0]+' '+RK[P.risk][1]+' · '+pend.length+' pendente'+(pend.length===1?'':'s')+', '+ok.length+' concluída'+(ok.length===1?'':'s'));
- const fc=pend.filter(m=>m.foco),cu=pend.filter(m=>m.cur&&!m.foco);
- if(fc.length)L.push('🎯 Foco: '+fc.map(m=>m.nome).join(', '));if(cu.length)L.push('📚 Cursando: '+cu.map(m=>m.nome).join(', '));
+ const al=f.mats.filter(m=>!m.ok),fc=al.filter(m=>m.foco),cu=al.filter(m=>m.cur&&!m.foco&&m.tipo!=='proj'),pj=al.filter(m=>m.tipo==='proj');
+ if(fc.length)L.push('🎯 Foco: '+fc.map(m=>m.nome).join(', '));if(cu.length)L.push('📚 Cursando: '+cu.map(m=>m.nome).join(', '));if(pj.length)L.push('🧪 Projetos: '+pj.map(m=>m.nome+(m.cur?' (em andamento)':'')).join(', '));
  const gar=pend.filter(m=>(P.info[m.id]||{}).d>0).sort((a,b)=>P.info[b.id].d-P.info[a.id].d).slice(0,3);
  if(gar.length)L.push('🚧 Gargalos: '+gar.map(m=>m.nome+' (libera '+P.info[m.id].d+')').join(', '));
  if(P.un.length)L.push('⚠️ Não cabem no prazo: '+P.un.map(m=>m.nome).join(', '));
- pend.filter(m=>m.cur||m.foco).forEach(m=>{const g=gInfo(m);if(!g.none)L.push('📝 '+m.nome+': '+gTxt(g).replace(/<\/?b>/g,''))});
+ al.filter(m=>m.cur||m.foco).forEach(m=>{const g=gInfo(m);if(!g.none)L.push('📝 '+m.nome+': '+gTxt(g).replace(/<\/?b>/g,''))});
  const nx=P.list[P.cur+1];if(nx&&nx.length)L.push('Próximo semestre ('+lbl(P.cur+1)+'): '+nx.map(m=>m.nome).join(', '));
  return{t:L.join('\n'),m:P.risk==='red'?'push':'care'}}
 function ctx(){const f=F(),P=getPlan();return{semestre_atual:lbl(P.cur),semestre_final:f.fim||null,data_final:f.dataFim||null,risco_do_prazo:RK[P.risk][1],maximo_materias_por_semestre:f.maxSem,nota_minima_padrao:f.minG,
- materias:f.mats.map(m=>{const g=gInfo(m),fi=falInfo(m),i=P.info[m.id];return{nome:m.nome,concluida:!!m.ok,cursando:!!m.cur,foco:!!m.foco,reprovacoes:m.rep||0,abre:OF[m.of||'todo'],requer:m.dep.map(d=>(f.mats.find(x=>x.id===d)||{}).nome).filter(Boolean),libera_n_materias:i?i.d:0,ofertas_ate_o_prazo:i?i.o:null,semestre_planejado:m.id in P.sem?lbl(P.sem[m.id]):null,nao_cabe_no_prazo:P.un.includes(m),
+ materias:f.mats.map(m=>{const g=gInfo(m),fi=falInfo(m),i=P.info[m.id];return{nome:m.nome,tipo:m.tipo==='proj'?'projeto':'matéria',prazo_do_projeto:m.dl||null,concluida:!!m.ok,cursando:!!m.cur,foco:!!m.foco,reprovacoes:m.rep||0,abre:OF[m.of||'todo'],requer:m.dep.map(d=>(f.mats.find(x=>x.id===d)||{}).nome).filter(Boolean),libera_n_materias:i?i.d:0,ofertas_ate_o_prazo:i?i.o:null,semestre_planejado:m.id in P.sem?lbl(P.sem[m.id]):null,nao_cabe_no_prazo:P.un.includes(m),
   notas:g.none?null:{modo:m.modo==='soma'?'soma de pontos':'média ponderada',atual:g.cur==null?null:+g.cur.toFixed(2),minimo:g.min,situacao:g.st,necessario_nas_restantes:+g.need.toFixed(2),avaliacoes:m.av.map(a=>({nome:a.n,peso_ou_pontos:a.p,nota:a.nota,data:a.dt||null}))},
   faltas:fi?{usadas:fi.fal,limite:fi.lim}:null,entregas:m.ent.filter(e=>!e.ok).map(e=>({nome:e.n,data:e.dt||null}))}}),
  distribuicao:Object.keys(P.list).sort().map(i=>({semestre:lbl(+i),materias:P.list[i].map(m=>m.nome)}))}}
@@ -119,46 +120,51 @@ function bNotas(m){const g=gInfo(m),soma=m.modo==='soma',sc=m.max||10;
  <p class="sub" style="margin:10px 0 0">${gTxt(g)}</p></div>`}
 function bEnt(m){return`<div style="margin:8px 0">${m.ent.map(e=>`<div class="lzrow" style="align-items:center"><span>${e.ok?'✅ ':''}${E(e.n)}<small>${e.dt?bd(e.dt):'sem data'}</small></span><span style="display:flex;gap:6px"><button class="btn" data-f="entok" data-id="${m.id}" data-e="${e.id}">${e.ok?'Reabrir':'Feito'}</button><button class="ghost danger" data-f="entdel" data-id="${m.id}" data-e="${e.id}">✕</button></span></div>`).join('')}
  <div class="mgr" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px"><label style="font-size:.8rem;color:var(--muted)">Marco ou entrega<br><input type="text" id="en-n-${m.id}" maxlength="50" placeholder="Ex.: Entrega da monografia" style="width:190px;${IS}"></label><label style="font-size:.8rem;color:var(--muted)">Data<br><input type="date" id="en-d-${m.id}" style="${IS}"></label>${subj(m)?`<label class="lzck"><input type="checkbox" id="en-t-${m.id}" checked> criar tarefa no app</label>`:''}<button class="btn main" data-f="entadd" data-id="${m.id}">Adicionar</button></div></div>`}
-function bOferta(m,f){const others=f.mats.filter(x=>x.id!==m.id),free=S.subjects.filter(s=>!s.arch&&(m.sid===s.id||!f.mats.some(x=>x.sid===s.id)));
+function bOf0(m,f){const others=f.mats.filter(x=>x.id!==m.id&&x.tipo!=='proj'),free=S.subjects.filter(s=>!s.arch&&(m.sid===s.id||!f.mats.some(x=>x.sid===s.id)));
  return`<label style="display:block;margin:8px 0;font-size:.85rem;color:var(--muted)">Quando abre<br><select data-f="of" data-id="${m.id}" style="${IS}">${Object.entries(OF).map(([k,v])=>`<option value="${k}"${(m.of||'todo')===k?' selected':''}>${v}</option>`).join('')}</select></label>
  <label style="display:block;margin:8px 0;font-size:.85rem;color:var(--muted)">Ligada à matéria do app<br><select data-f="sid" data-id="${m.id}" style="${IS}"><option value="">— nenhuma —</option>${free.map(s=>`<option value="${s.id}"${m.sid===s.id?' selected':''}>${E(s.name)}</option>`).join('')}</select></label>
  ${others.length?`<div class="sub" style="margin:6px 0 4px">Depende de:</div><div class="wdc">${others.map(o=>`<label><input type="checkbox" data-f="dep" data-id="${m.id}" data-d="${o.id}"${m.dep.includes(o.id)?' checked':''}> ${E(o.nome)}</label>`).join('')}</div>`:''}`}
 function bFal(m){const fi=falInfo(m);return`<div class="mgr" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:8px 0"><label style="font-size:.82rem;color:var(--muted)">Aulas no semestre<br>${inp('aulas',m.id,m.aulas||'',80,'ex.: 60')}</label><label style="font-size:.82rem;color:var(--muted)">Faltas<br>${inp('fal',m.id,m.fal||0,80,'0')}</label></div><p class="sub" style="margin:0">${fi?`Limite de 25%: <b>${fi.lim}</b> faltas · restam <b style="color:${fi.left<=0?'#e5484d':'inherit'}">${Math.max(0,fi.left)}</b>`:'Informe o total de aulas para calcular o limite.'}</p>`}
+const tipoSel=m=>`<label style="display:block;margin:8px 0;font-size:.85rem;color:var(--muted)">Tipo<br><select data-f="tipo" data-id="${m.id}" style="${IS}"><option value="">Matéria</option><option value="proj"${m.tipo==='proj'?' selected':''}>Projeto (sem oferta nem prazo de semestre)</option></select></label>`;
+function bOferta(m,f){if(m.tipo!=='proj')return tipoSel(m)+bOf0(m,f);const free=S.subjects.filter(s=>!s.arch&&(m.sid===s.id||!f.mats.some(x=>x.sid===s.id)));
+ return tipoSel(m)+`<label style="display:block;margin:8px 0;font-size:.85rem;color:var(--muted)">Prazo (opcional)<br><input type="date" data-f="dl" data-id="${m.id}" value="${E(m.dl||'')}" style="${IS}"></label><label style="display:block;margin:8px 0;font-size:.85rem;color:var(--muted)">Ligada à matéria do app<br><select data-f="sid" data-id="${m.id}" style="${IS}"><option value="">— nenhuma —</option>${free.map(s=>`<option value="${s.id}"${m.sid===s.id?' selected':''}>${E(s.name)}</option>`).join('')}</select></label>`}
 function card(m,P,f){const i=P.info[m.id]||{d:0,o:0},g=gInfo(m),sem=P.sem[m.id],by=id=>f.mats.find(x=>x.id===id),deps=m.dep.map(by).filter(Boolean),w=m.ok?[]:why(m,P);
- let st;if(m.ok)st=`<b style="color:#00a878">✅ Concluída</b>${m.rep?' · repetida '+m.rep+'×':''}`;
+ const pr=m.tipo==='proj';let st;if(pr)st=(m.ok?'<b style="color:#00a878">✅ Concluído</b>':m.cur?'🧪 <b>Em andamento</b>':'Não iniciado')+(m.dl?' · prazo '+bd(m.dl)+(m.ok?'':' ('+diff(fmt(now()),m.dl)+' dias)'):'');else if(m.ok)st=`<b style="color:#00a878">✅ Concluída</b>${m.rep?' · repetida '+m.rep+'×':''}`;
  else if(!(m.id in P.sem))st='<b style="color:#e5484d">⚠️ Não cabe no prazo</b> · '+i.o+' oferta'+(i.o===1?'':'s')+' possíveis';
  else st=(m.cur?'📚 <b>Cursando agora</b>':'Planejada para <b>'+lbl(sem)+'</b>')+' · '+i.o+' oferta'+(i.o===1?'':'s')+' até o fim'+(m.rep?' · repetida '+m.rep+'×':'');
  const fi=falInfo(m),nm=m.ent.filter(e=>!e.ok).length;
- return`<div class="mgc" style="--c:${m.foco?'#f59e0b':'var(--flame)'};${m.foco?'border:2px solid #f59e0b':''}"><div class="mgh"><div class="mgt">${m.foco?'🎯 ':''}${E(m.nome)}${m.sid?' <small>ligada à matéria do app</small>':''}<small>${OF[m.of||'todo']}${deps.length?' · Requer: '+deps.map(d=>E(d.nome)+(d.ok?' ✓':'')).join(', '):''}</small></div>
- <div class="acts" style="flex-wrap:wrap">${m.ok?'':`<button class="btn${m.cur?' main':''}" data-f="cur" data-id="${m.id}">📚 Cursando</button><button class="btn${m.foco?' main':''}" data-f="foco" data-id="${m.id}">🎯 Foco</button>`}<button class="btn" data-f="ok" data-id="${m.id}">${m.ok?'Reabrir':'Concluí'}</button>${m.cur||m.ok?`<button class="ghost" data-f="rep" data-id="${m.id}">Reprovei</button>`:''}<button class="ghost danger" data-f="del" data-id="${m.id}">✕</button></div></div>
+ return`<div class="mgc" style="--c:${m.foco?'#f59e0b':'var(--flame)'};${m.foco?'border:2px solid #f59e0b':''}"><div class="mgh"><div class="mgt">${m.foco?'🎯 ':''}${E(m.nome)}${m.sid?' <small>ligada à matéria do app</small>':''}<small>${pr?'Projeto da faculdade':OF[m.of||'todo']}${deps.length&&!pr?' · Requer: '+deps.map(d=>E(d.nome)+(d.ok?' ✓':'')).join(', '):''}</small></div>
+ <div class="acts" style="flex-wrap:wrap">${m.ok?'':`<button class="btn${m.cur?' main':''}" data-f="cur" data-id="${m.id}">${pr?'🧪 Em andamento':'📚 Cursando'}</button><button class="btn${m.foco?' main':''}" data-f="foco" data-id="${m.id}">🎯 Foco</button>`}<button class="btn" data-f="ok" data-id="${m.id}">${m.ok?'Reabrir':(pr?'Concluído':'Concluí')}</button>${!pr&&(m.cur||m.ok)?`<button class="ghost" data-f="rep" data-id="${m.id}">Reprovei</button>`:''}<button class="ghost danger" data-f="del" data-id="${m.id}">✕</button></div></div>
  <p class="mgm" style="color:var(--ink)">${st}${w.length&&!m.ok?'<br><span class="sub">Por quê: '+E(w.join(' · '))+'</span>':''}${!g.none?'<br><span class="sub">📝 '+gTxt(g)+'</span>':''}${fi&&(m.cur||fi.fal>0)?`<br><span class="sub">🪑 ${fi.fal}/${fi.lim} faltas</span>`:''}</p>
- ${det(m.id+':n','📝 Notas e pesos'+(m.av.length?' ('+m.av.length+')':''),bNotas(m))}${det(m.id+':e','📌 Marcos e entregas'+(nm?' ('+nm+')':''),bEnt(m))}${det(m.id+':f','🪑 Faltas',bFal(m))}${det(m.id+':o','⚙️ Oferta, matéria do app e pré-requisitos',bOferta(m,f))}</div>`}
+ ${det(m.id+':n','📝 Notas e pesos'+(m.av.length?' ('+m.av.length+')':''),bNotas(m))}${det(m.id+':e','📌 Marcos e entregas'+(nm?' ('+nm+')':''),bEnt(m))}${pr?'':det(m.id+':f','🪑 Faltas',bFal(m))}${det(m.id+':o',pr?'⚙️ Tipo, prazo e matéria do app':'⚙️ Tipo, oferta, matéria do app e pré-requisitos',bOferta(m,f))}</div>`}
 
-function draw(){const f=F(),el=mk(),P=plan(f);memo={t:Date.now(),v:P};const cur=P.cur,M=f.mats,pend=M.filter(m=>!m.ok).sort((a,b)=>P.sc(b)-P.sc(a)),ok=M.filter(m=>m.ok);
+function draw(){const f=F(),el=mk(),P=plan(f);memo={t:Date.now(),v:P};const cur=P.cur,M=f.mats,pend=M.filter(m=>!m.ok&&m.tipo!=='proj').sort((a,b)=>P.sc(b)-P.sc(a)),ok=M.filter(m=>m.ok&&m.tipo!=='proj'),pj=M.filter(m=>m.tipo==='proj').sort((a,b)=>(a.ok-b.ok)||P.sc(b)-P.sc(a));
  const left=P.fim!=null?Math.max(0,P.fim-cur+1):null,rk=RK[P.risk];let dl='';
  if(f.dataFim){const n=Math.ceil((new Date(f.dataFim+'T12:00:00')-new Date())/864e5);dl=n>=0?n+' dias até a data final':'data final já passou'}
- const prio=pend.map(m=>({m,w:why(m,P)})).filter(o=>o.w.length).slice(0,4);
+ const prio=M.filter(m=>!m.ok).sort((a,b)=>P.sc(b)-P.sc(a)).map(m=>({m,w:why(m,P)})).filter(o=>o.w.length).slice(0,4);
  const rows=[];for(let i=cur;i<=Math.min(P.end,cur+11);i++){const L=P.list[i]||[],full=L.length>=f.maxSem;
   rows.push(`<div class="lzrow"><span><b>${lbl(i)}</b>${i===cur?' (atual)':''}${i===P.fim?' · 🏁 final':''}<small>${L.length}/${f.maxSem} matérias${full?' · cheio':''}</small></span><span style="text-align:right;max-width:62%">${L.map(m=>(m.foco?'🎯 ':'')+E(m.nome)).join(', ')||'<small>livre</small>'}</span></div>`)}
  const subs=S.subjects.filter(s=>!s.arch);
  el.innerHTML=`<div style="max-width:900px;margin:0 auto"><div class="ptop" style="position:static"><button class="btn" data-f="close">← Início</button><h1>🎓 Faculdade</h1></div>
  <div class="mgs" style="border-left:6px solid ${rk[2]}"><h2>${rk[0]} ${rk[1]}</h2><div class="mgf"><div class="mgr"><label>Semestre final (ex.: 2028/1)<input type="text" id="fac-fim" value="${E(f.fim)}" placeholder="2028/1" maxlength="6" style="width:110px;${IS}"></label><label>Data final (editável)<input type="date" id="fac-dt" value="${E(f.dataFim)}" style="${IS}"></label><label>Máx. matérias por semestre<input type="number" id="fac-mx" min="1" max="12" value="${f.maxSem}" style="width:80px"></label><label>Nota mínima padrão<input type="text" id="fac-mg" value="${f1(f.minG)}" style="width:80px;${IS}"></label></div></div>
- <p class="sub" style="margin:10px 0 0">Agora: <b>${lbl(cur)}</b>${P.fim!=null?` · Faltam <b>${left} semestre${left===1?'':'s'}</b> (inclui o atual)${P.slack!=null&&!P.un.length?` · folga de ${P.slack} semestre${P.slack===1?'':'s'}`:''}`:' · defina o semestre final'}${dl?' · '+dl:''}<br>${pend.length} pendente${pend.length===1?'':'s'} · ${ok.length} concluída${ok.length===1?'':'s'}${P.un.length?` · <b style="color:#e5484d">${P.un.length} não cabe${P.un.length===1?'':'m'} no prazo</b>`:''}</p></div>
+ <p class="sub" style="margin:10px 0 0">Agora: <b>${lbl(cur)}</b>${P.fim!=null?` · Faltam <b>${left} semestre${left===1?'':'s'}</b> (inclui o atual)${P.slack!=null&&!P.un.length?` · folga de ${P.slack} semestre${P.slack===1?'':'s'}`:''}`:' · defina o semestre final'}${dl?' · '+dl:''}<br>${pend.length} pendente${pend.length===1?'':'s'} · ${ok.length} concluída${ok.length===1?'':'s'}${pj.length?' · '+pj.filter(m=>!m.ok).length+' projeto(s) ativo(s)':''}${P.un.length?` · <b style="color:#e5484d">${P.un.length} não cabe${P.un.length===1?'':'m'} no prazo</b>`:''}</p></div>
  ${prio.length?`<div class="mgs"><h2>📚 Estude por causa da faculdade</h2><p class="sub" style="margin-top:0">Essas prioridades já entram no plano semanal e nos alertas da Lumi.</p>${prio.map(o=>{const w7=wkMin(o.m);return`<div class="chinfo"><b>${E(o.m.nome)}</b>${w7!=null?` <small>· ${hh(w7)} estudados em 7 dias</small>`:''}<br><span class="sub">${E(o.w.join(' · '))}</span></div>`}).join('')}</div>`:''}
  <div class="mgs"><h2>🗓️ Distribuição pelos semestres</h2>${rows.join('')||'<p class="sub">Defina o semestre final.</p>'}${P.un.length?`<div class="chinfo bad"><b>Não encaixam até o prazo:</b> ${P.un.map(m=>E(m.nome)).join(', ')}</div>`:''}<p class="sub" style="margin:8px 0 0;font-size:.8rem">Respeita pré-requisitos, quando cada matéria abre e o máximo por semestre. Cursando e foco entram primeiro; gargalos têm prioridade.</p></div>
- <div class="mgs"><h2>Nova matéria</h2><div class="mgf"><div class="mgr"><label style="flex:1 1 200px">Nome<input type="text" id="fac-n" maxlength="60" style="${IS}"></label><label>Quando abre<select id="fac-o" style="${IS}">${Object.entries(OF).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label><label class="lzck"><input type="checkbox" id="fac-d"> Já concluída</label></div><button class="btn main" data-f="add">Adicionar</button></div></div>
+ <div class="mgs"><h2>Nova matéria</h2><div class="mgf"><div class="mgr"><label style="flex:1 1 200px">Nome<input type="text" id="fac-n" maxlength="60" style="${IS}"></label><label>Quando abre<select id="fac-o" style="${IS}">${Object.entries(OF).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label><label>Tipo<select id="fac-t" style="${IS}"><option value="">Matéria</option><option value="proj">Projeto</option></select></label><label class="lzck"><input type="checkbox" id="fac-d"> Já concluída</label></div><button class="btn main" data-f="add">Adicionar</button></div></div>
  <div class="mgs"><h2>📌 Pendentes</h2>${pend.map(m=>card(m,P,f)).join('')||'<p class="sub">Nada pendente.</p>'}</div>
+ <div class="mgs"><h2>🧪 Projetos</h2><p class="sub" style="margin-top:0">Projetos da faculdade (TCC, iniciação científica etc.): não têm oferta, pré-requisito nem entram no prazo dos semestres. O prazo é opcional.</p>${pj.map(m=>card(m,P,f)).join('')||'<p class="sub">Nenhum projeto. Marque "Projeto" em Matérias do app ou ao criar uma nova.</p>'}</div>
  <div class="mgs"><h2>✅ Concluídas</h2>${ok.map(m=>card(m,P,f)).join('')||'<p class="sub">Nenhuma ainda.</p>'}</div>
  <div class="mgs"><h2>Matérias do app</h2><p class="sub" style="margin-top:0">Marque quais são da faculdade e se já terminou. Só as da faculdade entram na lista acima.</p>
- ${subs.map(s=>{const m=M.find(x=>x.sid===s.id);return`<div class="lzrow" style="align-items:center"><span><span class="dsc" style="display:inline-block;background:${s.color};margin-right:6px"></span>${E(s.name)}</span><span style="display:flex;gap:12px"><label class="lzck"><input type="checkbox" data-f="sfac" data-id="${s.id}"${m?' checked':''}> Faculdade</label>${m?`<label class="lzck"><input type="checkbox" data-f="sfin" data-id="${s.id}"${m.ok?' checked':''}> Concluída</label>`:''}</span></div>`}).join('')||'<p class="sub">Sem matérias.</p>'}</div></div>`}
+ ${subs.map(s=>{const m=M.find(x=>x.sid===s.id);return`<div class="lzrow" style="align-items:center"><span><span class="dsc" style="display:inline-block;background:${s.color};margin-right:6px"></span>${E(s.name)}</span><span style="display:flex;gap:12px"><label class="lzck"><input type="checkbox" data-f="sfac" data-id="${s.id}"${m?' checked':''}> Faculdade</label>${m?`<label class="lzck"><input type="checkbox" data-f="sproj" data-id="${s.id}"${m.tipo==='proj'?' checked':''}> Projeto</label><label class="lzck"><input type="checkbox" data-f="sfin" data-id="${s.id}"${m.ok?' checked':''}> Concluída</label>`:''}</span></div>`}).join('')||'<p class="sub">Sem matérias.</p>'}</div></div>`}
 
+function setTipo(m,p){if(p){m.tipo='proj';m.dep=[];m.of='todo';F().mats.forEach(x=>x.dep=x.dep.filter(d=>d!==m.id))}else delete m.tipo}
 function setOk(m,v){m.ok=!!v;if(v){m.foco=false;m.cur=false}const s=subj(m);if(s)s.fin=!!v}
 function mkTask(m,name,date,exam){const s=subj(m);if(!s)return'';const id='t'+Date.now().toString(36)+Math.random().toString(36).slice(2,4);(s.topics=s.topics||[]).push({id,name,date:date||'',prio:'media',est:0,done:false,doneAt:'',note:'',exam:!!exam});return id}
 const done=()=>{bust();save();draw();try{render()}catch(e){}};
 function onClick(e){const b=e.target.closest('[data-f]');if(!b||/^(INPUT|SELECT|TEXTAREA)$/.test(b.tagName))return;const a=b.dataset.f,f=F(),m=f.mats.find(x=>x.id===b.dataset.id),q=id=>ov.querySelector('#'+id);
  if(a==='close'){open=false;ov.style.display='none';document.body.style.overflow='';try{render()}catch(x){}return}
  if(a==='add'){const n=q('fac-n').value.trim();if(!n){toast('Digite o nome da matéria.');return}
-  const o={id:'f'+Date.now().toString(36),nome:n.slice(0,60),of:q('fac-o').value,dep:[],av:[],ent:[],ok:false,foco:false,cur:false};setOk(o,q('fac-d').checked);f.mats.push(o)}
+  const o={id:'f'+Date.now().toString(36),nome:n.slice(0,60),of:q('fac-o').value,dep:[],av:[],ent:[],ok:false,foco:false,cur:false};if(q('fac-t').value==='proj')o.tipo='proj';setOk(o,q('fac-d').checked);f.mats.push(o)}
  else if(!m)return;
  else if(a==='ok')setOk(m,!m.ok);
  else if(a==='foco'){m.foco=!m.foco;if(m.foco)m.cur=true}
@@ -183,10 +189,13 @@ function onChange(e){const t=e.target,a=t.dataset.f,f=F();
  if(a==='sfac'){const s=S.subjects.find(x=>x.id===id);if(!s)return;
   if(t.checked){s.fac=true;if(!f.mats.some(x=>x.sid===id))f.mats.push({id:'f'+Date.now().toString(36),sid:id,nome:s.name,of:'todo',dep:[],av:[],ent:[],ok:!!s.fin,foco:false,cur:false})}
   else{const x=f.mats.find(y=>y.sid===id);if(x){f.mats=f.mats.filter(y=>y!==x);f.mats.forEach(y=>y.dep=y.dep.filter(d=>d!==x.id))}delete s.fac;delete s.fin}done();return}
+ if(a==='sproj'){const x=f.mats.find(y=>y.sid===id);if(x)setTipo(x,t.checked);done();return}
  if(a==='sfin'){const x=f.mats.find(y=>y.sid===id);if(x)setOk(x,t.checked);done();return}
  if(!m)return;
  if(a==='of')m.of=t.value;
  else if(a==='modo')m.modo=t.value;
+ else if(a==='tipo')setTipo(m,t.value==='proj');
+ else if(a==='dl'){if(t.value)m.dl=t.value;else delete m.dl}
  else if(a==='dep'){const d=t.dataset.d;m.dep=m.dep.filter(x=>x!==d);if(t.checked)m.dep.push(d)}
  else if(a==='sid'){const old=subj(m);if(old){delete old.fac;delete old.fin}m.sid=t.value||undefined;const s=subj(m);if(s){s.fac=true;s.fin=!!m.ok}}
  else if(a==='min'){const v=nu(t.value);if(v==null)delete m.min;else m.min=v}
@@ -201,9 +210,9 @@ function addBtn(){const t=document.querySelector('.tools');if(!t||document.getEl
  const b=document.createElement('button');b.className='btn';b.id='fac-btn';b.type='button';b.textContent='🎓 Faculdade';b.addEventListener('click',openFac);t.insertBefore(b,t.firstChild)}
 function home(){const f=F(),a=document.getElementById('panel'),old=document.getElementById('fac-home');
  if(!a||(!f.mats.length&&!f.fim)){if(old)old.remove();return}
- const P=getPlan(),rk=RK[P.risk],pend=f.mats.filter(m=>!m.ok),fc=pend.filter(m=>m.foco).map(m=>m.nome),left=P.fim!=null?Math.max(0,P.fim-P.cur+1):null;
+ const P=getPlan(),rk=RK[P.risk],pend=f.mats.filter(m=>!m.ok&&m.tipo!=='proj'),pj=f.mats.filter(m=>!m.ok&&m.tipo==='proj').length,fc=f.mats.filter(m=>!m.ok&&m.foco).map(m=>m.nome),left=P.fim!=null?Math.max(0,P.fim-P.cur+1):null;
  let el=old;if(!el){el=document.createElement('div');el.id='fac-home';a.parentNode.insertBefore(el,a);el.addEventListener('click',openFac)}
- el.innerHTML=`<div class="pn" style="cursor:pointer;border-left:6px solid ${rk[2]}"><div class="dpt"><h3>🎓 Faculdade · ${rk[0]} ${rk[1]}</h3><span class="sub">${f.fim?'até '+E(f.fim)+' · '+left+' sem.':''}</span></div><p class="sub" style="margin:6px 0 0">${pend.length} pendente${pend.length===1?'':'s'}${fc.length?' · 🎯 '+E(fc.join(', ')):''}${P.un.length?' · <b style="color:#e5484d">'+P.un.length+' fora do prazo</b>':''}</p></div>`}
+ el.innerHTML=`<div class="pn" style="cursor:pointer;border-left:6px solid ${rk[2]}"><div class="dpt"><h3>🎓 Faculdade · ${rk[0]} ${rk[1]}</h3><span class="sub">${f.fim?'até '+E(f.fim)+' · '+left+' sem.':''}</span></div><p class="sub" style="margin:6px 0 0">${pend.length} pendente${pend.length===1?'':'s'}${pj?' · '+pj+' projeto'+(pj===1?'':'s'):''}${fc.length?' · 🎯 '+E(fc.join(', ')):''}${P.un.length?' · <b style="color:#e5484d">'+P.un.length+' fora do prazo</b>':''}</p></div>`}
 /* ganchos no app */
 const _r=render;render=function(){const r=_r.apply(this,arguments);try{home()}catch(e){console.error('Faculdade:',e)}return r};
 const _rf=renderFeed;renderFeed=function(){_rf.apply(this,arguments);try{const el=document.getElementById('coach-sec');if(!el||curPage!=='feed')return;const f=F();if(!f.mats.length&&!f.fim)return;
