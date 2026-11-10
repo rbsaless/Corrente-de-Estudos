@@ -6,8 +6,8 @@ const coCfg=()=>{const c=S.coach=(S.coach&&typeof S.coach==='object')?S.coach:{}
 function coData(){
  const t=now(),T=fmt(t),A=S.subjects.filter(s=>!s.arch),dk=i=>fmt(addD(t,-i)),rng=(s,a,b)=>{let m=0;for(let i=a;i<b;i++)m+=s.days[dk(i)]||0;return m};
  const lg=(S.log||[]).filter(x=>x.f>0&&x.d>=dk(42));
- const subs=A.map(s=>{const w=impOf(s);let last=null;for(let i=0;i<120;i++)if((s.days[dk(i)]||0)>0){last=i;break}
-  const L=lg.filter(x=>x.sid===s.id&&x.d>=dk(28));return{s,w,r14:rng(s,0,14),p14:rng(s,14,28),last,n:L.length,fq:L.length?L.reduce((a,x)=>a+x.f,0)/L.length:null}});
+ const subs=A.map(s=>{const ex=exams().find(o=>o.s.id===s.id),eb=ex?(ex.n<=3?3:ex.n<=7?2:ex.n<=14?1.6:ex.n<=30?1.25:1):1,w=impOf(s)*eb;let last=null;for(let i=0;i<120;i++)if((s.days[dk(i)]||0)>0){last=i;break}
+  const L=lg.filter(x=>x.sid===s.id&&x.d>=dk(28));return{s,w,ex,r14:rng(s,0,14),p14:rng(s,14,28),last,n:L.length,fq:L.length?L.reduce((a,x)=>a+x.f,0)/L.length:null}});
  let d14=0,d14p=0,tot14=0,tot14p=0;for(let i=0;i<28;i++){const m=A.reduce((a,s)=>a+(s.days[dk(i)]||0),0);if(i<14){tot14+=m;if(m>0)d14++}else{tot14p+=m;if(m>0)d14p++}}
  const H={};lg.filter(x=>x.h!=null&&!isNaN(x.h)).forEach(x=>{const o=H[x.h]=H[x.h]||{h:x.h,n:0,f:0,m:0};o.n++;o.f+=x.f;o.m+=x.m});
  const hours=Object.values(H).filter(o=>o.n>=2).map(o=>({h:o.h,n:o.n,fq:o.f/o.n,m:o.m})).sort((a,b)=>b.fq-a.fq||b.m-a.m);
@@ -30,7 +30,7 @@ function coPlan(D,c){
  else if(c.f==='qua'){const w=act.filter(x=>x.fq!=null).sort((a,b)=>a.fq-b.fq)[0]||act.sort((a,b)=>b.w-a.w)[0];pick=[{x:w,m:Math.min(D.idl,45),why:`Matéria com seu menor foco médio${w.fq!=null?' ('+w.fq.toFixed(1).replace('.',',')+'★)':''}: coloque no melhor horário, sem celular, e termine com 3 min de recuperação ativa.`}]}
  else if(c.f==='str'){const mn=stkMin(D.T),dn=Math.round(stkTot(D.T)),x=act.slice().sort((a,b)=>b.r14-a.r14)[0];const left=Math.max(0,mn-dn);pick=[{x,m:Math.max(25,Math.min(left||25,D.idl)),why:left>0?`Faltam ${hh(left)} para o mínimo de hoje (${hh(mn)}). Escolhi a matéria que você mais sustenta, para garantir o dia.`:`O mínimo de hoje (${hh(mn)}) já foi batido. Este bloco protege amanhã.`}]}
  else if(c.f==='laz'){const z=lzCfg(),b=lzBal();const r=z.rate*chMul()*.5/60;const need=b<0&&r>0?Math.ceil(-b/r):0;const x=act.slice().sort((a,b)=>b.w-a.w||a.s.diff-b.s.diff)[0];const n=Math.max(1,Math.min(3,Math.ceil(need/Math.max(D.idl,25))));for(let i=0;i<n;i++)pick.push({x,m:D.idl,why:need>0?`Dívida de lazer de ${lzN(b)}: foco 5★ rende mais lazer por minuto (estimativa conservadora: ${hh(need)} no total).`:'Sem dívida de lazer: use para adiantar matéria e ganhar folga.'})}
- else{pick=act.slice().sort((a,b)=>gap(b)-gap(a)).slice(0,3).map(x=>({x,m:D.idl,why:`Recebe ${Math.round(x.r14/tot*100)}% do seu tempo, mas pela importância deveria receber ~${Math.round(x.w/sw*100)}%.`}))}
+ else{pick=act.slice().sort((a,b)=>gap(b)-gap(a)).slice(0,3).map(x=>({x,m:D.idl,why:(x.ex?`📝 Prova ${x.ex.n===0?'hoje':'em '+x.ex.n+' dia'+pl(x.ex.n)}: peso extra. `:'')+`Recebe ${Math.round(x.r14/tot*100)}% do seu tempo, mas pela importância${x.ex?' e pela prova':''} deveria receber ~${Math.round(x.w/sw*100)}%.`}))}
  const sl=coSlots(D,pick.length,0);return pick.map((p,i)=>({...p,at:sl[i]}));
 }
 function coInsights(D,c){
@@ -70,4 +70,3 @@ renderFeed=(f0=>function(){f0();renderCoach()})(renderFeed);
 
 
 route();
-
