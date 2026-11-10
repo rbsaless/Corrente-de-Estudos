@@ -26,7 +26,7 @@ function gInfo(m){const f=F(),A=m.av||[],min=m.min!=null?m.min:f.minG,sc=m.max||
 const gRisk=g=>{if(g.none)return null;if(g.st==='no')return'no';if(g.st==='go'){const lim=g.soma?g.cap:g.sc;return g.need>lim*.8?'hi':null}return g.st==='ok'?'ok':null};
 function gTxt(g){if(g.none)return'Sem avaliações cadastradas.';
  const s=g.st==='ok'?'✅ nota mínima garantida':g.st==='no'?'⚠️ não alcança mais a nota mínima':g.soma?`precisa de <b>${f1(g.need)}</b> dos ${f1(g.cap)} pontos restantes`:`precisa de média <b>${f1(g.need)}</b> nas ${g.nr} avaliaç${g.nr===1?'ão restante':'ões restantes'}`;
- return(g.soma?`Pontos: <b>${f1(g.cur)}</b> de ${f1(g.sc)}`:`Média atual: <b>${g.cur==null?'—':f1(g.cur)}</b>`)+` · mínimo ${f1(g.min)} · ${s}`}
+ return(g.soma?`Nota do semestre: <b>${f1(Math.min(g.cur,10))}</b>${g.cur>10?' (limitada a 10)':''} · pontos disponíveis ${f1(g.sc)}`:`Média atual: <b>${g.cur==null?'—':f1(g.cur)}</b>`)+` · mínimo ${f1(g.min)} · ${s}`}
 const falInfo=m=>{const lim=+m.aulas>0?Math.floor(m.aulas*.25):null,fal=+m.fal||0;return lim==null?null:{lim,fal,left:lim-fal}};
 
 /* ---------- planejamento por semestre ---------- */
@@ -201,7 +201,7 @@ function matInfo(m){const t=fmt(now()),g=gInfo(m),sb=subj(m),T=(sb?sb.topics||[]
  sc=Math.max(0,Math.min(100,Math.round(sc)));return{g,T,dn,pd,estM,tp,qa,fi,nx,nd,fd,sc}}
 function matCard(m){const I=matInfo(m),g=I.g,col=I.sc>=75?'#00a878':I.sc>=50?'#f59e0b':'#e5484d',lab=I.sc>=75?'🟢 Segura':I.sc>=50?'🟡 Atenção':'🔴 Em risco',fm=m.fmin!=null?m.fmin:5;
  let proj;if(g.none)proj='Cadastre as avaliações em Matérias para ver a projeção.';else{proj=gTxt(g);
-  if(g.st==='no'){const med=g.cur==null?0:g.cur/g.sc*10,need=Math.max(0,2*fm-med);proj+=`<br>📌 <b>Vai para a final</b>: com média ${f1(med)}, precisa de <b>${f1(need)}</b> na prova final${need>10?' (praticamente fora de alcance)':''} para fechar ${f1(fm)} (considera média entre as notas e a final).`}}
+  if(g.st==='no'){const med=g.cur==null?0:g.soma?Math.min(g.cur,10):g.cur/g.sc*10,need=Math.max(0,2*fm-med);proj+=`<br>📌 <b>Vai para a final</b>: com média ${f1(med)}, precisa de <b>${f1(need)}</b> na prova final${need>10?' (praticamente fora de alcance)':''} para fechar ${f1(fm)} (considera média entre as notas e a final).`}}
  const ex=I.nx?`📝 <b>${E(I.nx.n)}</b> em ${I.nd===0?'hoje':I.nd+' dia'+pl(I.nd)}`:'Nenhuma prova agendada',fin=I.fd!=null?` · 🏁 final em ${I.fd} dia${pl(I.fd)}`:'';
  let est='';if(I.T.length)est=`Tópicos estudados: <b>${I.dn}/${I.T.length}</b> (${Math.round(I.tp)}%)`+(I.pd.length?` · faltam ${I.pd.length} (≈${hh(I.estM)})`+(I.nd!=null?` → <b>~${hh(Math.ceil(I.estM/Math.max(1,I.nd)))}/dia</b> até a prova`:''):' · tudo visto 🎉');else est='Sem tópicos: crie tarefas/tópicos na matéria para medir seu preparo.';
  const fal=I.fi?` · 🪑 faltas ${I.fi.fal}/${I.fi.lim}`:'',qs=I.qa!=null?` · ✍️ acerto ${Math.round(I.qa)}% em ${m.qf} questões`:'';
