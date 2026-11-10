@@ -168,7 +168,7 @@ document.addEventListener('change',e=>{const t=e.target.dataset;if(!t||(!t.diff&
 function subjFactor(s){
  const d=diffOf(s),im=impOf(s),ex=exams().find(o=>o.s.id===s.id);let b=1;const why=[];
  if(d===3)why.push('difícil');else if(d===1)why.push('fácil');if(im===3)why.push('importância alta');else if(im===1)why.push('importância baixa');else if(im===0)why.push('sem importância');
- if(ex){if(ex.n<=7)b=2;else if(ex.n<=14)b=1.6;else if(ex.n<=30)b=1.25;if(ex.n<=30)why.push(`prova ${ex.n===0?'hoje':'em '+ex.n+' dia'+pl(ex.n)}`)}
+ if(ex){if(ex.n<=3)b=3;else if(ex.n<=7)b=2;else if(ex.n<=14)b=1.6;else if(ex.n<=30)b=1.25;if(ex.n<=30)why.push(`prova ${ex.n===0?'hoje':'em '+ex.n+' dia'+pl(ex.n)}`)}
  return{w:[.7,1,1.5][d-1]*IMPW[im]*b,why:why.join(' · '),ex,d,im}}
 /* Plano semanal: fatores extras (tarefas atrasadas/pendentes, revisões vencidas, dias sem estudar, defasagem). Só usado no plano. */
 function planFactor(s){
@@ -207,10 +207,11 @@ const xn=x=>(x.exam?'📝 ':'')+esc(x.name);
 function exams(){const t=fmt(now()),L=[];S.subjects.forEach(s=>(s.topics||[]).forEach(x=>{if(x.exam&&!x.done&&x.date&&x.date>=t)L.push({s,x,n:diff(t,x.date)})}));return L.sort((a,b)=>a.n-b.n||a.x.name.localeCompare(b.x.name))}
 let exOpen=false;
 document.addEventListener('toggle',e=>{if(e.target.id==='exf')exOpen=e.target.open},true);
+function contProg(s){const T=(s.topics||[]).filter(x=>!x.exam);const n=T.length,d=T.filter(x=>x.done).length;return n?{n,d,pend:Math.round((n-d)/n*100)}:null}
 function examsHtml(){
  const L=exams(),t=fmt(now());
  const cards=L.map(({s,x,n})=>{const big=n===0?'Hoje':n===1?'Amanhã':n,sm=n>1?'dias restantes':n===0?'é hoje!':'falta 1 dia';
-  return`<div class="exc${n<=3?' u3':n<=7?' u7':''}"${n>7?` style="--c:${s.color}"`:''}><div class="exn"><b${n<2?' class="w"':''}>${big}</b><span>${sm}</span></div><div class="exi"><div class="tn">📝 ${esc(x.name)}</div><div class="sub" style="margin:0;font-size:.85rem">${esc(s.name)} · ${parse(x.date).toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short'})}</div><div class="exa"><button class="ghost" data-a="exdone" data-id="${s.id}" data-tid="${x.id}">Concluir</button><button class="ghost" data-a="exdel" data-id="${s.id}" data-tid="${x.id}" aria-label="Excluir prova">✕</button></div></div></div>`}).join('');
+  return`<div class="exc${n<=3?' u3':n<=7?' u7':''}"${n>7?` style="--c:${s.color}"`:''}><div class="exn"><b${n<2?' class="w"':''}>${big}</b><span>${sm}</span></div><div class="exi"><div class="tn">📝 ${esc(x.name)}</div><div class="sub" style="margin:0;font-size:.85rem">${esc(s.name)} · ${parse(x.date).toLocaleDateString('pt-BR',{weekday:'short',day:'numeric',month:'short'})}</div>${(()=>{const p=contProg(s);return p?`<div class="sub" style="margin:4px 0 0;font-size:.82rem">${p.pend===0?'✅ Todo o conteúdo concluído':`Faltam <b>${p.pend}%</b> do conteúdo (${p.n-p.d} de ${p.n} tópicos)`}${n>1?` e ${n} dias para a prova`:n===1?' e 1 dia para a prova':' · a prova é hoje'}</div><div class="pbar"><i style="width:${100-p.pend}%"></i></div>`:''})()}<div class="exa"><button class="ghost" data-a="exdone" data-id="${s.id}" data-tid="${x.id}">Concluir</button><button class="ghost" data-a="exdel" data-id="${s.id}" data-tid="${x.id}" aria-label="Excluir prova">✕</button></div></div></div>`}).join('');
  const A=S.subjects.filter(s=>!s.arch);
  const form=A.length?`<details class="exf" id="exf"${exOpen?' open':''}><summary>➕ Cadastrar prova</summary><div class="gform" style="margin-top:8px"><select id="ex-s" aria-label="Matéria">${A.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select><input type="text" id="ex-n" maxlength="80" placeholder="Nome (ex.: Prova de Matemática)" aria-label="Nome da prova" style="flex:1 1 180px"><input type="date" id="ex-d" min="${t}" aria-label="Data da prova"><button class="btn main" data-a="exadd">Cadastrar</button></div></details>`:'';
  return`<div class="pn"><h3>📝 Provas${L.length?` · contagem regressiva`:''}</h3>${L.length?`<div class="exg">${cards}</div>`:'<p class="sub" style="margin:0 0 6px">Nenhuma prova cadastrada. Cadastre uma e a contagem regressiva aparece aqui.</p>'}${form}</div>`}
@@ -218,7 +219,8 @@ function examsHtml(){
 /* ----- Revisão espaçada (1, 7 e 30 dias) ----- */
 function schedRev(s,x,k){
  S.rev=(S.rev||[]).filter(r=>!(r.tid===x.id&&!r.done));
- [1,7,30].forEach(n=>S.rev.push({id:'r'+Date.now().toString(36)+n+Math.random().toString(36).slice(2,5),sid:s.id,tid:x.id,name:x.name,date:fmt(addD(parse(k),n)),n,done:false}))}
+ if(!x.rv)return;
+ [1,3,7,21].forEach(n=>S.rev.push({id:'r'+Date.now().toString(36)+n+Math.random().toString(36).slice(2,5),sid:s.id,tid:x.id,name:x.name,date:fmt(addD(parse(k),n)),n,done:false}))}
 const unsched=x=>{S.rev=(S.rev||[]).filter(r=>!(r.tid===x.id&&!r.done))};
 const revValid=r=>S.subjects.some(s=>s.id===r.sid);
 const revDue=()=>{const t=fmt(now());return(S.rev||[]).filter(r=>!r.done&&r.date<=t&&revValid(r)).sort((a,b)=>a.date<b.date?-1:1)};
@@ -250,5 +252,3 @@ document.addEventListener('click',e=>{
  else if(a==='exdone'&&s){const x=(s.topics||[]).find(y=>y.id===b.dataset.tid);if(x){setDone(s,x,true);save();render();toast('Prova concluída.')}}
  else if(a==='exdel'&&s){if(confirm('Excluir esta prova?')){s.topics=(s.topics||[]).filter(y=>y.id!==b.dataset.tid);save();render()}}
 });
-
-
