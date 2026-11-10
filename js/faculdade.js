@@ -1,6 +1,6 @@
 /* ===== Área da Faculdade: Gerenciador Acadêmico, Previsão de Nota, Caminho Crítico (2028/1) e Foco Semestral =====
    Novo arquivo independente para extensão do Corrente de Estudos.
-   Garante navegação autônoma e funcionamento total dos cliques. */
+   Correção de clique duplo / conflito de roteamento com o core.js. */
 (()=>{
   /* --- 1. Injeção Dinâmica de Estilos CSS --- */
   const css = document.createElement('style');
@@ -584,11 +584,15 @@
   }
 
   /* --- 6. Roteador de Navegação Autônomo e Handlers de Eventos --- */
+  // USAMOS FASE DE CAPTURA (useCapture = true) E stopImmediatePropagation() PARA EVITAR INTERFERÊNCIA DO CORE.JS
   document.addEventListener('click', e => {
     // A) NAVEGAÇÃO AUTÔNOMA: Clique no botão "🎓 Área Faculdade" do topo
     const navBtn = e.target.closest('[data-p="faculdade"]');
     if (navBtn) {
       e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
       window.curPage = 'faculdade';
 
       // Esconder a home e todas as outras páginas
@@ -610,6 +614,9 @@
     const backBtn = e.target.closest('#pg-faculdade [data-a="back"]');
     if (backBtn) {
       e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
       window.curPage = 'home';
 
       const pgFc = document.getElementById('pg-faculdade');
@@ -712,7 +719,7 @@
       }
       return;
     }
-  });
+  }, true); // true = Use Capture (executa ANTES de qualquer outro listener da página)
 
   // Evento de Submissão do Formulário
   document.addEventListener('submit', e => {
