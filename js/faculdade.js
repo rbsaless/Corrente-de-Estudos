@@ -12,7 +12,10 @@ const IS='background:var(--surface);border:1px solid var(--line);border-radius:1
 const F=()=>{const f=S.faculdade=(S.faculdade&&typeof S.faculdade==='object'&&!Array.isArray(S.faculdade))?S.faculdade:{};
  if(!Array.isArray(f.mats))f.mats=[];if(typeof f.fim!=='string')f.fim='';if(typeof f.dataFim!=='string')f.dataFim='';
  f.maxSem=+f.maxSem>0?+f.maxSem:6;f.minG=+f.minG>0?+f.minG:7;
- f.mats.forEach(m=>{m.dep=Array.isArray(m.dep)?m.dep:[];m.av=Array.isArray(m.av)?m.av:[];m.ent=Array.isArray(m.ent)?m.ent:[]});return f};
+ f.mats.forEach(m=>{m.dep=Array.isArray(m.dep)?m.dep:[];m.av=Array.isArray(m.av)?m.av:[];m.ent=Array.isArray(m.ent)?m.ent:[]});try{syncProvas(f)}catch(e){}return f};
+function syncProvas(f){f.mats.forEach(m=>{const sb=subj(m);if(!sb||m.tipo==='proj')return;(sb.topics||[]).forEach(x=>{if(!x.exam)return;
+ if(/final/i.test(x.name)){if(!x.done&&x.date&&m.pfdt!==x.date)m.pfdt=x.date;return}
+ const a=m.av.find(y=>y.tid===x.id);if(!a)m.av.push({id:'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,4),n:(x.name.replace(/\s*\(.*\)\s*$/,'')||x.name).slice(0,40),p:1,nota:null,dt:x.date||'',tid:x.id});else if(x.date&&a.dt!==x.date)a.dt=x.date})})}
 const subj=m=>m.sid&&S.subjects.find(x=>x.id===m.sid);
 
 /* ---------- notas ---------- */
@@ -115,7 +118,7 @@ function bNotas(m){const g=gInfo(m),soma=m.modo==='soma',sc=m.max||10;
  return`<div style="margin:8px 0"><div class="mgr" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end"><label style="font-size:.82rem;color:var(--muted)">Como a nota é calculada<select data-f="modo" data-id="${m.id}" style="${IS}"><option value="pond"${soma?'':' selected'}>Média ponderada (nota × peso)</option><option value="soma"${soma?' selected':''}>Soma de pontos</option></select></label>
  <label style="font-size:.82rem;color:var(--muted)">Nota mínima<br>${inp('min',m.id,m.min!=null?m.min:'',70,'padrão '+F().minG)}</label>${soma?'':`<label style="font-size:.82rem;color:var(--muted)">Escala máx.<br>${inp('max',m.id,m.max||'',70,'10')}</label>`}</div>
  <p class="sub" style="margin:8px 0">${soma?'Cada avaliação vale N pontos; a nota é a soma dos pontos obtidos.':'Média = soma de (nota × peso) ÷ soma dos pesos. Peso 1 em todas equivale à média simples.'}</p>
- ${m.av.map(a=>`<div class="lzrow" style="align-items:center;gap:8px;flex-wrap:wrap"><span>${E(a.n)}<small>${soma?'vale':'peso'} ${f1(a.p)}${a.dt?' · '+bd(a.dt).slice(0,5):''}</small></span><span style="display:flex;gap:6px;align-items:center">${inp('nota',m.id,a.nota==null?'':a.nota,70,'nota','data-av="'+a.id+'"')}<button class="ghost danger" data-f="avdel" data-id="${m.id}" data-av="${a.id}">✕</button></span></div>`).join('')||''}
+ ${m.av.map(a=>`<div class="lzrow" style="align-items:center;gap:8px;flex-wrap:wrap"><span>${inp('avn',m.id,a.n,150,'nome','data-av="'+a.id+'"')}</span><span style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end"><label style="font-size:.7rem;color:var(--muted)">${soma?'vale':'peso'}<br>${inp('avp',m.id,f1(a.p),56,'','data-av="'+a.id+'"')}</label><label style="font-size:.7rem;color:var(--muted)">data<br><input type="date" data-f="avdt" data-id="${m.id}" data-av="${a.id}" value="${E(a.dt||'')}" style="${IS}"></label></span><span style="display:flex;gap:6px;align-items:center">${inp('nota',m.id,a.nota==null?'':a.nota,70,'nota','data-av="'+a.id+'"')}<button class="ghost danger" data-f="avdel" data-id="${m.id}" data-av="${a.id}">✕</button></span></div>`).join('')||''}
  <div class="mgr" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:10px"><label style="font-size:.8rem;color:var(--muted)">Avaliação<br><input type="text" id="av-n-${m.id}" maxlength="40" placeholder="Ex.: Prova 1" style="width:130px;${IS}"></label><label style="font-size:.8rem;color:var(--muted)">${soma?'Pontos desta avaliação':'Peso (1 se todas valem igual)'}<br><input type="text" id="av-p-${m.id}" value="1" style="width:60px;${IS}"></label><label style="font-size:.8rem;color:var(--muted)">Data<br><input type="date" id="av-d-${m.id}" style="${IS}"></label><label style="font-size:.8rem;color:var(--muted)">Nota tirada (vazio se ainda não fez)<br><input type="text" id="av-nt-${m.id}" placeholder="Ex.: 7,5" style="width:90px;${IS}"></label>${subj(m)?`<label class="lzck"><input type="checkbox" id="av-t-${m.id}" checked> também criar no app (tarefas e calendário)</label>`:''}<button class="btn main" data-f="avadd" data-id="${m.id}">Adicionar avaliação</button></div>
  <p class="sub" style="margin:10px 0 0">${gTxt(g)}</p></div>`}
 function bEnt(m){const sb=subj(m),T=sb?(sb.topics||[]):[],used=new Set([...m.ent,...m.av].map(x=>x.tid).filter(Boolean));
@@ -167,9 +170,10 @@ const css=document.createElement('style');css.textContent=`
 .fc-em{text-align:center;padding:30px 16px;color:var(--muted)}
 @media(max-width:560px){.fc-hero{grid-template-columns:1fr;justify-items:center;text-align:center}.fc-chips{justify-content:center}.fc-g{grid-template-columns:1fr}}`;
 document.head.appendChild(css);
-{const y=document.createElement('style');y.textContent='.fc-yl{margin-top:18px;background:color-mix(in srgb,#f5c518 22%,var(--surface));border:1px solid #f5c518;border-radius:18px;padding:14px 16px}.fc-yl h2{margin:0 0 4px;font-size:1.1rem}.fc-yr{padding:8px 0;border-top:1px solid color-mix(in srgb,#f5c518 40%,transparent)}.fc-yp{display:inline-block;padding:2px 10px;border-radius:99px;background:var(--surface);border:1px solid var(--line);font-size:.8rem}.fc-yp.pl{background:#f5c518;color:#1a1a1a;border-color:#f5c518;font-weight:700}';y.textContent+='.fc-g{grid-template-columns:1fr!important;gap:18px}.fc-c{padding:20px;gap:14px}.fc-c .fc-b,.fc-c .btn{min-height:42px;padding:8px 14px}.fc-c input,.fc-c select{min-height:42px}.fc-c .lzrow{padding:12px 0}.fc-av{background:var(--bg);border-radius:16px;padding:14px;margin-top:10px}.fc-mc{background:var(--bg);border-left:6px solid var(--c);border-radius:16px;padding:12px 14px;margin-top:10px}.fc-sf{height:8px;border-radius:99px;background:var(--track);overflow:hidden;margin-top:8px}.fc-sf i{display:block;height:100%;background:var(--c);border-radius:99px}';document.head.appendChild(y)}
+{const y=document.createElement('style');y.textContent='.fc-yl{margin-top:18px;background:color-mix(in srgb,#f5c518 22%,var(--surface));border:1px solid #f5c518;border-radius:18px;padding:14px 16px}.fc-yl h2{margin:0 0 4px;font-size:1.1rem}.fc-yr{padding:8px 0;border-top:1px solid color-mix(in srgb,#f5c518 40%,transparent)}.fc-yp{display:inline-block;padding:2px 10px;border-radius:99px;background:var(--surface);border:1px solid var(--line);font-size:.8rem}.fc-yp.pl{background:#f5c518;color:#1a1a1a;border-color:#f5c518;font-weight:700}';y.textContent+='.fc-exg{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}.fc-ex{display:flex;gap:14px;align-items:center;background:var(--bg);border-left:6px solid var(--c);border-radius:16px;padding:14px}.fc-exn{min-width:64px;text-align:center}.fc-exn b{display:block;font:800 2.2rem/1 "Bricolage Grotesque","DM Sans",sans-serif;color:var(--c)}.fc-exn span{font-size:.72rem;color:var(--muted)}.fc-g{grid-template-columns:1fr!important;gap:18px}.fc-c{padding:20px;gap:14px}.fc-c .fc-b,.fc-c .btn{min-height:42px;padding:8px 14px}.fc-c input,.fc-c select{min-height:42px}.fc-c .lzrow{padding:12px 0}.fc-av{background:var(--bg);border-radius:16px;padding:14px;margin-top:10px}.fc-mc{background:var(--bg);border-left:6px solid var(--c);border-radius:16px;padding:12px 14px;margin-top:10px}.fc-sf{height:8px;border-radius:99px;background:var(--track);overflow:hidden;margin-top:8px}.fc-sf i{display:block;height:100%;background:var(--c);border-radius:99px}';document.head.appendChild(y)}
 const SS=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}},SG=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const hashSet=on=>{try{history.replaceState(null,'',on?'#faculdade':location.pathname+location.search)}catch(e){}};
+let cmat=SG('fac-det')||null;
 let tab=['home','mat','proj','sem','cfg'].includes(SG('fac-tab'))?SG('fac-tab'):'home',flt='pend';
 const pill=(t,c)=>`<span class="fc-p" style="--c:${c}">${t}</span>`;
 const ring=(pct,col)=>`<svg viewBox="0 0 120 120" width="124" height="124" aria-label="${pct}% concluído"><circle cx="60" cy="60" r="50" fill="none" stroke="var(--track)" stroke-width="12"/><circle cx="60" cy="60" r="50" fill="none" stroke="${col}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${(pct*3.1416).toFixed(1)} 314.2" transform="rotate(-90 60 60)"/><text x="60" y="67" text-anchor="middle" font-size="26" font-weight="800" fill="var(--ink)">${pct}%</text></svg>`;
@@ -190,7 +194,7 @@ function card(m,P,f){const i=P.info[m.id]||{d:0,o:0},g=gInfo(m),sem=P.sem[m.id],
  return`<div class="fc-c${m.ok?' ok':''}" style="--c:${col}"><div><h3>${E(m.nome)}</h3>${deps.length&&!pr?`<p class="fc-sub">Requer: ${deps.map(d=>E(d.nome)+(d.ok?' ✓':'')).join(', ')}</p>`:''}</div>
  <div class="fc-row">${pl.join('')}</div>${w.length?`<p class="fc-sub">Por quê: ${E(w.join(' · '))}</p>`:''}${g.none?'':bar+`<p class="fc-sub">📝 ${gTxt(g)}</p>`}
  <div class="fc-ac">${m.ok?bt('ok','Reabrir'):bt('cur',pr?'🧪 Andamento':'📚 Cursando',m.cur)+bt('foco','🎯 Foco',m.foco)+bt('ok',pr?'Concluir':'Concluí')}${!pr&&(m.cur||m.ok)?bt('rep','Reprovei'):''}${!pr&&m.cur&&!m.ok?bt('des','🚪 Desisti'):''}<button class="fc-b dng" data-f="del" data-id="${m.id}" aria-label="Remover">✕</button></div>
- ${det(m.id+':n','📝 Notas e pesos'+(m.av.length?' ('+m.av.length+')':''),bNotas(m))}${det(m.id+':e','📌 Marcos e entregas'+(nm?' ('+nm+')':''),bEnt(m))}${pr?'':det(m.id+':f','🪑 Faltas',bFal(m))}${det(m.id+':o',pr?'⚙️ Tipo, prazo e matéria do app':'⚙️ Tipo, oferta, matéria do app e pré-requisitos',bOferta(m,f))}</div>`}
+ <button class="btn main" data-f="opn" data-id="${m.id}" style="width:100%;min-height:46px">Abrir matéria · provas, notas e configurações ›</button></div>`}
 function semRange(f){const y=new Date().getFullYear(),a=curIdx()%2===0;return{a:f.sIni||(a?y+'-02-01':y+'-08-01'),b:f.sFim||(a?y+'-06-30':y+'-12-15')}}
 function matInfo(m){const t=fmt(now()),g=gInfo(m),sb=subj(m),T=(sb?sb.topics||[]:[]).filter(x=>!x.exam),dn=T.filter(x=>x.done).length,pd=T.filter(x=>!x.done),
  estM=pd.reduce((a,x)=>a+(+x.est>0?+x.est:40),0),tp=T.length?dn/T.length*100:null,qa=(m.qf||0)>=5?(m.qa||0)/m.qf*100:null,fi=falInfo(m),
@@ -205,9 +209,37 @@ function matCard(m){const I=matInfo(m),g=I.g,col=I.sc>=75?'#00a878':I.sc>=50?'#f
  const ex=I.nx?`📝 <b>${E(I.nx.n)}</b> em ${I.nd===0?'hoje':I.nd+' dia'+pl(I.nd)}`:'Nenhuma prova agendada',fin=I.fd!=null?` · 🏁 final em ${I.fd} dia${pl(I.fd)}`:'';
  let est='';if(I.T.length)est=`Tópicos estudados: <b>${I.dn}/${I.T.length}</b> (${Math.round(I.tp)}%)`+(I.pd.length?` · faltam ${I.pd.length} (≈${hh(I.estM)})`+(I.nd!=null?` → <b>~${hh(Math.ceil(I.estM/Math.max(1,I.nd)))}/dia</b> até a prova`:''):' · tudo visto 🎉');else est='Sem tópicos: crie tarefas/tópicos na matéria para medir seu preparo.';
  const fal=I.fi?` · 🪑 faltas ${I.fi.fal}/${I.fi.lim}`:'',qs=I.qa!=null?` · ✍️ acerto ${Math.round(I.qa)}% em ${m.qf} questões`:'';
- return`<div class="fc-mc" style="--c:${col}"><div class="dpt"><b>${E(m.nome)}</b><span class="fc-p" style="--c:${col}">${lab} · ${I.sc}%</span></div><div class="fc-sf"><i style="width:${I.sc}%"></i></div><p class="fc-sub" style="margin:6px 0">${ex}${fin}${fal}${qs}</p><p class="fc-sub" style="margin:4px 0">${proj}</p><p class="fc-sub" style="margin:4px 0">${est}</p></div>`}
+ return`<div class="fc-mc" style="--c:${col}"><div class="dpt"><b>${E(m.nome)}</b><span class="fc-p" style="--c:${col}">${lab} · ${I.sc}%</span></div><div class="fc-sf"><i style="width:${I.sc}%"></i></div><p class="fc-sub" style="margin:6px 0">${ex}${fin}${fal}${qs}</p><p class="fc-sub" style="margin:4px 0">${proj}</p><p class="fc-sub" style="margin:4px 0">${est}</p><button class="btn" data-f="opn" data-id="${m.id}" style="margin-top:6px;min-height:42px">Ver cenários e detalhes ›</button></div>`}
+function provasSec(f){const L=exams().map(o=>({o,m:f.mats.find(m=>m.sid===o.s.id&&!m.ok)})).filter(z=>z.m);if(!L.length)return'';
+ return`<div class="fc-sec"><h2>📝 Provas e entregas · contagem regressiva</h2><p class="fc-sub" style="margin:0 0 8px">Todas as provas cadastradas nas matérias do app. Mudar a data aqui muda no app e nas avaliações.</p><div class="fc-exg">${L.map(({o,m})=>`<div class="fc-ex" style="--c:${o.s.color}"><div class="fc-exn"><b>${o.n}</b><span>dia${pl(o.n)}</span></div><div style="flex:1;min-width:0"><b>${E(o.x.name)}</b>${/final/i.test(o.x.name)?' <small>🏁 final</small>':''}<br><small>${E(o.s.name)}</small><div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><input type="date" data-f="exdt" data-id="${m.id}" data-t="${o.x.id}" value="${E(o.x.date)}" style="${IS}"><button class="btn" data-f="opn" data-id="${m.id}">Abrir matéria ›</button></div></div></div>`).join('')}</div></div>`}
+function scen(m){const g0=gInfo(m),pe=(m.av||[]).filter(a=>a.nota==null),soma=m.modo==='soma',fm=m.fmin!=null?m.fmin:5,sc=m.max||10;
+ if(g0.none)return'<p class="fc-sub">Cadastre as avaliações para ver os cenários.</p>';if(!pe.length)return'<p class="fc-sub">Todas as avaliações já têm nota. '+gTxt(g0)+'</p>';
+ const rows=[10,9,8,7,6,5,4,3,2,1,0].map(v=>{const m2=Object.assign({},m,{av:m.av.map(a=>a.nota==null?Object.assign({},a,{nota:soma?a.p*v/10:sc*v/10}):a)}),g=gInfo(m2),med=g.cur==null?0:soma?Math.min(g.cur,10):g.cur/g.sc*10,need=Math.max(0,2*fm-med);
+  const r=g.st==='ok'?`<span style="color:#00a878">✅ Aprovado direto · média ${f1(med)}</span>`:need<=10?`<span style="color:#f59e0b">⚠️ Média ${f1(med)} → final: precisa de ${f1(need)}</span>`:`<span style="color:#e5484d">❌ Média ${f1(med)} → reprova mesmo com 10 na final</span>`;
+  return`<div class="lzrow"><span><b>${soma?v*10+'% dos pontos':'Nota '+v}</b></span><span style="text-align:right">${r}</span></div>`}).join('');
+ return`<p class="fc-sub" style="margin:0 0 6px">Faltam ${pe.length} avaliaç${pe.length===1?'ão':'ões'} (${pe.map(a=>E(a.n)).join(', ')}). Cenário: você tira o mesmo desempenho em todas as que faltam. ${gTxt(g0)}</p>${rows}<p class="fc-sub" style="margin:8px 0 0">Final: (média do semestre + prova final) ÷ 2 ≥ ${f1(fm)}.</p>`}
+function dicas(m){const I=matInfo(m),D=[],t=fmt(now());
+ if(I.nd!=null)D.push(`📝 Próxima avaliação: <b>${E(I.nx.n)}</b> em ${I.nd} dia${pl(I.nd)}.`+(I.pd.length?` Distribua ${I.pd.length} tópico${pl(I.pd.length)} pendente${pl(I.pd.length)} (≈${hh(I.estM)}) em ~${hh(Math.ceil(I.estM/Math.max(1,I.nd)))} por dia.`:''));
+ if(I.fd!=null)D.push(`🏁 Prova final em ${I.fd} dia${pl(I.fd)}: reserve as últimas revisões para ela só se precisar.`);
+ if(I.tp!=null&&I.tp<50)D.push(`📚 Só ${Math.round(I.tp)}% dos tópicos vistos. Comece pelos pendentes: ${I.pd.slice(0,4).map(x=>E(x.name)).join(', ')}.`);
+ if(I.T.length===0)D.push('🧩 Sem tópicos cadastrados: crie os tópicos da matéria no app para o app medir seu preparo.');
+ if(I.qa!=null&&I.qa<60)D.push(`✍️ Acerto de ${Math.round(I.qa)}% nas questões: faça questões comentadas e revise os erros antes de seguir.`);
+ else if((m.qf||0)<10)D.push('✍️ Poucas questões registradas: meta de 10 por dia e anote em "Questões feitas/Acertos".');
+ const w=wkMin(m);if(w!=null&&I.sc<75)D.push(`⏱️ Você estudou ${hh(w)} em 7 dias. ${w<180?'Suba para pelo menos 3h por semana nesta matéria.':'Mantenha o ritmo e foque em questões.'}`);
+ if(I.fi&&I.fi.left<=1)D.push(`🪑 Faltas no limite (${I.fi.fal}/${I.fi.lim}): não falte mais.`);
+ if(I.sc<50)D.push('🔄 Mudança de rotina: coloque um bloco fixo desta matéria no seu melhor horário de foco, sem celular, e termine com revisão ativa (fechar o material e escrever o que lembra).');
+ if(!D.length)D.push('✅ Tudo em ordem. Mantenha a rotina e registre as notas conforme saírem.');
+ return D.map(x=>`<div class="chinfo" style="margin-bottom:8px">${x}</div>`).join('')}
+function vDet(X,m){const{f,P}=X,pr=m.tipo==='proj',I=matInfo(m),col=I.sc>=75?'#00a878':I.sc>=50?'#f59e0b':'#e5484d',nm=m.ent.filter(e=>!e.ok).length;
+ return`<div class="fc-sec"><button class="btn" data-f="cls">← Voltar</button><h2 style="margin-top:10px">${E(m.nome)}</h2>${pr?'':`<div class="fc-sf"><i style="width:${I.sc}%;background:${col}"></i></div><p class="fc-sub">Segurança: <b style="color:${col}">${I.sc}%</b> · ${gTxt(I.g)}</p>`}</div>
+ ${pr?'':`<div class="fc-sec"><h2>🎯 Cenários de aprovação</h2>${scen(m)}</div><div class="fc-sec"><h2>🧭 O que fazer agora</h2>${dicas(m)}</div>`}
+ <div class="fc-sec"><h2>📝 Provas e notas</h2>${bNotas(m)}</div>
+ <div class="fc-sec"><h2>📌 Marcos e entregas${nm?' ('+nm+')':''}</h2>${bEnt(m)}</div>
+ ${pr?'':`<div class="fc-sec"><h2>🪑 Faltas</h2>${bFal(m)}</div>`}
+ <div class="fc-sec"><h2>⚙️ Configurações da matéria</h2>${bOferta(m,f)}</div>`}
 function vNow(X){const{f,P,C}=X,cs=C.filter(m=>m.cur&&!m.ok),R=semRange(f),t=fmt(now()),tot=Math.max(1,diff(R.a,R.b)),el=Math.max(0,Math.min(tot,diff(R.a,t))),pct=Math.round(el/tot*100),left=Math.max(0,diff(t,R.b)),I=cs.map(m=>matInfo(m)),avg=I.length?Math.round(I.reduce((a,x)=>a+x.sc,0)/I.length):null,rk=I.filter(x=>x.sc<50).length;
  return`<div class="fc-hero" style="--c:var(--flame)">${ring(pct,'var(--flame)')}<div><h2>Semestre ${lbl(P.cur)}</h2><p>${left>0?'Faltam <b>'+left+' dia'+pl(left)+'</b> para acabar ('+bd(R.b).slice(0,5)+')':'Semestre encerrado em '+bd(R.b).slice(0,5)} · ${pct}% do tempo decorrido</p><div class="fc-chips">${pill(cs.length+' cursando','var(--muted)')}${avg!=null?pill('segurança média '+avg+'%',avg>=75?'#00a878':avg>=50?'#f59e0b':'#e5484d'):''}${rk?pill('⚠️ '+rk+' em risco','#e5484d'):''}</div></div></div>
+ ${provasSec(f)}
  <div class="fc-sec"><h2>📅 Matérias do semestre</h2><p class="fc-sub" style="margin:0 0 8px">Projeção de nota, próxima prova, preparo pelos tópicos e segurança (nota 50%, tópicos 30%, questões 20%). Ajuste datas do semestre em Ajustes e prova final, questões e acertos dentro de cada matéria.</p>${cs.map(matCard).join('')||'<p class="fc-em">Marque matérias como 📚 Cursando para acompanhar aqui.</p>'}</div>`}
 function vHome(X){const{f,P,M,C,pend,ok,pj,rk,left,dl}=X;
  if(!M.length&&!f.fim)return`<div class="fc-sec fc-em"><h2 style="color:var(--ink)">Vamos começar 🎓</h2><p>Defina o semestre final e marque quais matérias do app são da faculdade.</p><button class="btn main" data-f="tab" data-v="cfg">Ir para Ajustes</button></div>`;
@@ -244,7 +276,7 @@ function draw(){const f=F(),el=mk(),P=plan(f);memo={t:Date.now(),v:P};const M=f.
  if(f.dataFim){const n=Math.ceil((new Date(f.dataFim+'T12:00:00')-new Date())/864e5);dl=n>=0?n+' dias até a data final':'data final já passou'}
  const X={f,P,M,C,pend,ok,pj,rk,left,dl},TB=[['home','🏠 Visão geral'],['mat','📚 Matérias ('+C.length+')'],['proj','🧪 Projetos ('+pj.length+')'],['sem','🗓️ Semestres'],['cfg','⚙️ Ajustes']];
  el.innerHTML=`<div class="fc-w"><div class="fc-top"><div class="fc-hd"><button class="btn" data-f="close">← Início</button><h1>🎓 Faculdade</h1></div><div class="fc-tabs" role="tablist">${TB.map(([k,l])=>`<button type="button" role="tab" data-f="tab" data-v="${k}" class="${tab===k?'on':''}">${l}</button>`).join('')}</div></div>
- ${({home:vHome,mat:vMat,proj:vProj,sem:vSem,cfg:vCfg})[tab](X)}</div>`}
+ ${(()=>{const dm=cmat&&f.mats.find(x=>x.id===cmat);return dm?vDet(X,dm):({home:vHome,mat:vMat,proj:vProj,sem:vSem,cfg:vCfg})[tab](X)})()}</div>`}
 function setTipo(m,p){if(p){m.tipo='proj';m.dep=[];m.of='todo';F().mats.forEach(x=>x.dep=x.dep.filter(d=>d!==m.id))}else delete m.tipo}
 function setOk(m,v){m.ok=!!v;if(v){m.foco=false;m.cur=false}const s=subj(m);if(s)s.fin=!!v}
 function mkTask(m,name,date,exam){const s=subj(m);if(!s)return'';const id='t'+Date.now().toString(36)+Math.random().toString(36).slice(2,4);(s.topics=s.topics||[]).push({id,name,date:date||'',prio:'media',est:0,done:false,doneAt:'',note:'',exam:!!exam});return id}
@@ -253,7 +285,9 @@ const syncAv=(m,av)=>{const tk=av.tid&&tkOf(m,av.tid);if(!tk)return;if(av.nota!=
 const done=()=>{bust();save();draw();try{render()}catch(e){}};
 function onClick(e){const b=e.target.closest('[data-f]');if(!b||/^(INPUT|SELECT|TEXTAREA)$/.test(b.tagName))return;const a=b.dataset.f,f=F(),m=f.mats.find(x=>x.id===b.dataset.id),q=id=>ov.querySelector('#'+id);
  if(a==='close'){open=false;ov.style.display='none';document.body.style.overflow='';SS('fac-open',null);hashSet(false);try{render()}catch(x){}return}
- if(a==='tab'){tab=b.dataset.v;SS('fac-tab',tab);draw();ov.scrollTop=0;return}
+ if(a==='opn'){cmat=b.dataset.id;SS('fac-det',cmat);draw();ov.scrollTop=0;return}
+ if(a==='cls'){cmat=null;SS('fac-det',null);draw();return}
+ if(a==='tab'){cmat=null;SS('fac-det',null);tab=b.dataset.v;SS('fac-tab',tab);draw();ov.scrollTop=0;return}
  if(a==='flt'){flt=b.dataset.v;draw();return}
  if(a==='add'){const n=q('fac-n').value.trim();if(!n){toast('Digite o nome da matéria.');return}
   const o={id:'f'+Date.now().toString(36),nome:n.slice(0,60),of:q('fac-o').value,dep:[],av:[],ent:[],ok:false,foco:false,cur:false};if(q('fac-t').value==='proj')o.tipo='proj';setOk(o,q('fac-d').checked);f.mats.push(o)}
@@ -292,6 +326,9 @@ function onChange(e){const t=e.target,a=t.dataset.f,f=F();
  else if(a==='modo')m.modo=t.value;
  else if(a==='tipo')setTipo(m,t.value==='proj');
  else if(a==='dl'){if(t.value)m.dl=t.value;else delete m.dl}
+  else if(a==='avn'||a==='avp'||a==='avdt'){const av=m.av.find(x=>x.id===t.dataset.av);if(!av)return;const tk=av.tid&&tkOf(m,av.tid);
+   if(a==='avn'){av.n=t.value.trim().slice(0,40)||av.n;if(tk)tk.name=av.n}else if(a==='avp'){const v=nu(t.value);if(v>0)av.p=v}else{av.dt=t.value;if(tk&&t.value)tk.date=t.value}}
+  else if(a==='exdt'){const tk=tkOf(m,t.dataset.t);if(tk&&t.value){tk.date=t.value;const av=m.av.find(y=>y.tid===tk.id);if(av)av.dt=t.value;if(/final/i.test(tk.name))m.pfdt=t.value}}
   else if(a==='pfdt'){if(t.value)m.pfdt=t.value;else delete m.pfdt}
   else if(a==='fmin'){const v=nu(t.value);if(v>0)m.fmin=v;else delete m.fmin}
   else if(a==='qf'){const v=nu(t.value);m.qf=v>0?Math.round(v):0;if(m.qa>m.qf)m.qa=m.qf}
