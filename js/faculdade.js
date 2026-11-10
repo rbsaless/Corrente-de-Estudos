@@ -106,7 +106,7 @@ function ctx(){const f=F(),P=getPlan();return{semestre_atual:lbl(P.cur),semestre
 /* ---------- interface ---------- */
 let ov=null,open=false;const OPEN=new Set();
 function mk(){if(ov)return ov;ov=document.createElement('div');ov.id='fac-ov';
- ov.style.cssText='position:fixed;inset:0;z-index:100;background:var(--bg);color:var(--ink);overflow:auto;padding:calc(12px + env(safe-area-inset-top,0px)) 14px 40px;display:none';
+ ov.style.cssText='position:fixed;inset:0;z-index:100;background:var(--bg);color:var(--ink);overflow:auto;padding:0 14px 40px;display:none';
  document.body.appendChild(ov);ov.addEventListener('click',onClick);ov.addEventListener('change',onChange);
  ov.addEventListener('toggle',e=>{const k=e.target.dataset&&e.target.dataset.k;if(k){e.target.open?OPEN.add(k):OPEN.delete(k)}},true);return ov}
 const det=(k,t,b)=>`<details data-k="${k}"${OPEN.has(k)?' open':''} style="margin-top:6px"><summary class="sub" style="cursor:pointer">${t}</summary>${b}</details>`;
@@ -128,41 +128,101 @@ function bFal(m){const fi=falInfo(m);return`<div class="mgr" style="display:flex
 const tipoSel=m=>`<label style="display:block;margin:8px 0;font-size:.85rem;color:var(--muted)">Tipo<br><select data-f="tipo" data-id="${m.id}" style="${IS}"><option value="">Matéria</option><option value="proj"${m.tipo==='proj'?' selected':''}>Projeto (sem oferta nem prazo de semestre)</option></select></label>`;
 function bOferta(m,f){if(m.tipo!=='proj')return tipoSel(m)+bOf0(m,f);const free=S.subjects.filter(s=>!s.arch&&(m.sid===s.id||!f.mats.some(x=>x.sid===s.id)));
  return tipoSel(m)+`<label style="display:block;margin:8px 0;font-size:.85rem;color:var(--muted)">Prazo (opcional)<br><input type="date" data-f="dl" data-id="${m.id}" value="${E(m.dl||'')}" style="${IS}"></label><label style="display:block;margin:8px 0;font-size:.85rem;color:var(--muted)">Ligada à matéria do app<br><select data-f="sid" data-id="${m.id}" style="${IS}"><option value="">— nenhuma —</option>${free.map(s=>`<option value="${s.id}"${m.sid===s.id?' selected':''}>${E(s.name)}</option>`).join('')}</select></label>`}
-function card(m,P,f){const i=P.info[m.id]||{d:0,o:0},g=gInfo(m),sem=P.sem[m.id],by=id=>f.mats.find(x=>x.id===id),deps=m.dep.map(by).filter(Boolean),w=m.ok?[]:why(m,P);
- const pr=m.tipo==='proj';let st;if(pr)st=(m.ok?'<b style="color:#00a878">✅ Concluído</b>':m.cur?'🧪 <b>Em andamento</b>':'Não iniciado')+(m.dl?' · prazo '+bd(m.dl)+(m.ok?'':' ('+diff(fmt(now()),m.dl)+' dias)'):'');else if(m.ok)st=`<b style="color:#00a878">✅ Concluída</b>${m.rep?' · repetida '+m.rep+'×':''}`;
- else if(!(m.id in P.sem))st='<b style="color:#e5484d">⚠️ Não cabe no prazo</b> · '+i.o+' oferta'+(i.o===1?'':'s')+' possíveis';
- else st=(m.cur?'📚 <b>Cursando agora</b>':'Planejada para <b>'+lbl(sem)+'</b>')+' · '+i.o+' oferta'+(i.o===1?'':'s')+' até o fim'+(m.rep?' · repetida '+m.rep+'×':'');
- const fi=falInfo(m),nm=m.ent.filter(e=>!e.ok).length;
- return`<div class="mgc" style="--c:${m.foco?'#f59e0b':'var(--flame)'};${m.foco?'border:2px solid #f59e0b':''}"><div class="mgh"><div class="mgt">${m.foco?'🎯 ':''}${E(m.nome)}${m.sid?' <small>ligada à matéria do app</small>':''}<small>${pr?'Projeto da faculdade':OF[m.of||'todo']}${deps.length&&!pr?' · Requer: '+deps.map(d=>E(d.nome)+(d.ok?' ✓':'')).join(', '):''}</small></div>
- <div class="acts" style="flex-wrap:wrap">${m.ok?'':`<button class="btn${m.cur?' main':''}" data-f="cur" data-id="${m.id}">${pr?'🧪 Em andamento':'📚 Cursando'}</button><button class="btn${m.foco?' main':''}" data-f="foco" data-id="${m.id}">🎯 Foco</button>`}<button class="btn" data-f="ok" data-id="${m.id}">${m.ok?'Reabrir':(pr?'Concluído':'Concluí')}</button>${!pr&&(m.cur||m.ok)?`<button class="ghost" data-f="rep" data-id="${m.id}">Reprovei</button>`:''}<button class="ghost danger" data-f="del" data-id="${m.id}">✕</button></div></div>
- <p class="mgm" style="color:var(--ink)">${st}${w.length&&!m.ok?'<br><span class="sub">Por quê: '+E(w.join(' · '))+'</span>':''}${!g.none?'<br><span class="sub">📝 '+gTxt(g)+'</span>':''}${fi&&(m.cur||fi.fal>0)?`<br><span class="sub">🪑 ${fi.fal}/${fi.lim} faltas</span>`:''}</p>
+const css=document.createElement('style');css.textContent=`
+#fac-ov *{box-sizing:border-box}
+.fc-w{max-width:980px;margin:0 auto}
+.fc-top{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(10px + env(safe-area-inset-top,0px)) 0 10px}
+.fc-hd{display:flex;align-items:center;gap:12px;margin-bottom:10px}.fc-hd h1{margin:0;font-size:clamp(1.4rem,5vw,2rem);letter-spacing:-.02em}
+.fc-tabs{display:flex;gap:4px;overflow-x:auto;padding:4px;background:var(--track);border-radius:14px;scrollbar-width:none}.fc-tabs::-webkit-scrollbar{display:none}
+.fc-tabs button{flex:1 0 auto;border:0;background:none;color:var(--muted);font:600 .86rem "DM Sans",sans-serif;padding:9px 13px;border-radius:10px;cursor:pointer;white-space:nowrap}
+.fc-tabs button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 5px rgba(0,0,0,.18)}
+.fc-hero{--c:var(--flame);display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center;background:linear-gradient(135deg,color-mix(in srgb,var(--c) 16%,var(--surface)),var(--surface) 70%);border:1px solid var(--line);border-radius:28px;padding:22px;margin-bottom:14px}
+.fc-hero h2{margin:0 0 4px;font:800 1.5rem "Bricolage Grotesque","DM Sans",sans-serif;letter-spacing:-.01em}
+.fc-hero p{margin:0;color:var(--muted);font-size:.92rem}
+.fc-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.fc-p{display:inline-flex;align-items:center;gap:4px;font-size:.74rem;font-weight:700;padding:3px 10px;border-radius:99px;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);border:1px solid color-mix(in srgb,var(--c) 35%,transparent);white-space:nowrap}
+.fc-st{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.fc-t{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px}.fc-t b{display:block;font:800 1.9rem/1 "Bricolage Grotesque","DM Sans",sans-serif}.fc-t span{font-size:.78rem;color:var(--muted)}
+.fc-sec{background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:18px;margin-bottom:14px}.fc-sec>h2{margin:0 0 10px;font-size:1.1rem}
+.fc-pr{border-left:5px solid var(--c);background:var(--bg);border-radius:14px;padding:11px 14px;margin-top:8px}.fc-pr small{color:var(--muted)}
+.fc-ft{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.fc-ft button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:99px;padding:6px 14px;font:600 .84rem "DM Sans",sans-serif;cursor:pointer}.fc-ft button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.fc-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px;align-items:start}
+.fc-c{--c:var(--flame);background:var(--surface);border:1px solid var(--line);border-top:5px solid var(--c);border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:9px}
+.fc-c.ok{opacity:.92}.fc-c h3{margin:0;font-size:1.05rem;line-height:1.25}
+.fc-row{display:flex;flex-wrap:wrap;gap:5px}.fc-sub{font-size:.82rem;color:var(--muted);margin:0}
+.fc-gb{position:relative;height:8px;border-radius:99px;background:var(--track)}.fc-gb i{display:block;height:100%;border-radius:99px;background:var(--c)}.fc-gb b{position:absolute;top:-3px;width:3px;height:14px;background:var(--ink);border-radius:2px}
+.fc-ac{display:flex;flex-wrap:wrap;gap:6px}
+.fc-b{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;padding:6px 11px;font:600 .8rem "DM Sans",sans-serif;cursor:pointer;min-height:34px}.fc-b.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}.fc-b.dng{color:#e5484d;margin-left:auto}
+.fc-c details{border-top:1px solid var(--line);padding-top:6px}.fc-c summary{cursor:pointer;font-size:.84rem;color:var(--muted)}
+.fc-sm{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 10px}
+.fc-sc{flex:0 0 200px;background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.fc-sc.now{border:2px solid var(--flame)}.fc-sc.end{border:2px dashed #00a878}.fc-sc.bad{border:2px solid #e5484d;background:color-mix(in srgb,#e5484d 8%,var(--bg))}
+.fc-sc h4{margin:0;font-size:.95rem}.fc-sc small{color:var(--muted)}
+.fc-i{--c:var(--flame);font-size:.82rem;padding:6px 9px;border-radius:10px;background:var(--surface);border-left:4px solid var(--c)}
+.fc-bn{background:color-mix(in srgb,#e5484d 12%,var(--surface));border:1px solid #e5484d;border-radius:16px;padding:12px 14px;margin-bottom:14px}
+.fc-em{text-align:center;padding:30px 16px;color:var(--muted)}
+@media(max-width:560px){.fc-hero{grid-template-columns:1fr;justify-items:center;text-align:center}.fc-chips{justify-content:center}.fc-g{grid-template-columns:1fr}}`;
+document.head.appendChild(css);
+const SS=(k,v)=>{try{v==null?sessionStorage.removeItem(k):sessionStorage.setItem(k,v)}catch(e){}},SG=k=>{try{return sessionStorage.getItem(k)}catch(e){return null}};
+let tab=['home','mat','proj','sem','cfg'].includes(SG('fac-tab'))?SG('fac-tab'):'home',flt='pend';
+const pill=(t,c)=>`<span class="fc-p" style="--c:${c}">${t}</span>`;
+const ring=(pct,col)=>`<svg viewBox="0 0 120 120" width="124" height="124" aria-label="${pct}% concluído"><circle cx="60" cy="60" r="50" fill="none" stroke="var(--track)" stroke-width="12"/><circle cx="60" cy="60" r="50" fill="none" stroke="${col}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${(pct*3.1416).toFixed(1)} 314.2" transform="rotate(-90 60 60)"/><text x="60" y="67" text-anchor="middle" font-size="26" font-weight="800" fill="var(--ink)">${pct}%</text></svg>`;
+function card(m,P,f){const i=P.info[m.id]||{d:0,o:0},g=gInfo(m),sem=P.sem[m.id],pr=m.tipo==='proj',s=subj(m),w=m.ok?[]:why(m,P),fi=falInfo(m),nm=m.ent.filter(e=>!e.ok).length;
+ const col=m.foco?'#f59e0b':m.ok?'#00a878':(s?s.color:'var(--flame)'),pl=[];
+ if(m.ok)pl.push(pill('✅ '+(pr?'Concluído':'Concluída'),'#00a878'));
+ if(m.foco)pl.push(pill('🎯 Foco','#f59e0b'));
+ if(m.cur&&!m.ok)pl.push(pill(pr?'🧪 Em andamento':'📚 Cursando','#3b82f6'));
+ if(!pr&&!m.ok){if(!(m.id in P.sem))pl.push(pill('⚠️ Fora do prazo','#e5484d'));else if(!m.cur)pl.push(pill('🗓️ '+lbl(sem),'var(--muted)'))}
+ if(i.d>0)pl.push(pill('🚧 trava '+i.d,'#f59e0b'));
+ if(!pr)pl.push(pill(OF[m.of||'todo'].replace(' (anual)',''),'var(--muted)'));
+ if(m.rep)pl.push(pill('↻ '+m.rep+'×','#e5484d'));
+ if(pr&&m.dl&&!m.ok){const n=diff(fmt(now()),m.dl);pl.push(pill('📅 '+bd(m.dl).slice(0,5)+' ('+n+'d)',n<=7?'#e5484d':'var(--muted)'))}
+ if(fi&&(m.cur||fi.fal>0))pl.push(pill('🪑 '+fi.fal+'/'+fi.lim,fi.left<=0?'#e5484d':'var(--muted)'));
+ const deps=m.dep.map(id=>f.mats.find(x=>x.id===id)).filter(Boolean),bt=(a,l,on)=>`<button class="fc-b${on?' on':''}" data-f="${a}" data-id="${m.id}">${l}</button>`;
+ const bar=!g.none&&g.cur!=null?`<div class="fc-gb"><i style="width:${Math.min(100,g.cur/g.sc*100)}%"></i><b style="left:calc(${Math.min(100,g.min/g.sc*100)}% - 1px)"></b></div>`:'';
+ return`<div class="fc-c${m.ok?' ok':''}" style="--c:${col}"><div><h3>${E(m.nome)}</h3>${deps.length&&!pr?`<p class="fc-sub">Requer: ${deps.map(d=>E(d.nome)+(d.ok?' ✓':'')).join(', ')}</p>`:''}</div>
+ <div class="fc-row">${pl.join('')}</div>${w.length?`<p class="fc-sub">Por quê: ${E(w.join(' · '))}</p>`:''}${g.none?'':bar+`<p class="fc-sub">📝 ${gTxt(g)}</p>`}
+ <div class="fc-ac">${m.ok?bt('ok','Reabrir'):bt('cur',pr?'🧪 Andamento':'📚 Cursando',m.cur)+bt('foco','🎯 Foco',m.foco)+bt('ok',pr?'Concluir':'Concluí')}${!pr&&(m.cur||m.ok)?bt('rep','Reprovei'):''}<button class="fc-b dng" data-f="del" data-id="${m.id}" aria-label="Remover">✕</button></div>
  ${det(m.id+':n','📝 Notas e pesos'+(m.av.length?' ('+m.av.length+')':''),bNotas(m))}${det(m.id+':e','📌 Marcos e entregas'+(nm?' ('+nm+')':''),bEnt(m))}${pr?'':det(m.id+':f','🪑 Faltas',bFal(m))}${det(m.id+':o',pr?'⚙️ Tipo, prazo e matéria do app':'⚙️ Tipo, oferta, matéria do app e pré-requisitos',bOferta(m,f))}</div>`}
-
-function draw(){const f=F(),el=mk(),P=plan(f);memo={t:Date.now(),v:P};const cur=P.cur,M=f.mats,pend=M.filter(m=>!m.ok&&m.tipo!=='proj').sort((a,b)=>P.sc(b)-P.sc(a)),ok=M.filter(m=>m.ok&&m.tipo!=='proj'),pj=M.filter(m=>m.tipo==='proj').sort((a,b)=>(a.ok-b.ok)||P.sc(b)-P.sc(a));
- const left=P.fim!=null?Math.max(0,P.fim-cur+1):null,rk=RK[P.risk];let dl='';
+function vHome(X){const{f,P,M,C,pend,ok,pj,rk,left,dl}=X;
+ if(!M.length&&!f.fim)return`<div class="fc-sec fc-em"><h2 style="color:var(--ink)">Vamos começar 🎓</h2><p>Defina o semestre final e marque quais matérias do app são da faculdade.</p><button class="btn main" data-f="tab" data-v="cfg">Ir para Ajustes</button></div>`;
+ const tot=C.length,pct=tot?Math.round(ok.length/tot*100):0,act=pj.filter(m=>!m.ok).length,cu=pend.filter(m=>m.cur).length;
+ const prio=M.filter(m=>!m.ok).sort((a,b)=>P.sc(b)-P.sc(a)).map(m=>({m,w:why(m,P)})).filter(o=>o.w.length).slice(0,4),nx=P.list[P.cur+1]||[];
+ return`<div class="fc-hero" style="--c:${rk[2]}">${ring(pct,rk[2]==='var(--muted)'?'var(--flame)':rk[2])}<div><h2>${f.fim?'Rumo a '+E(f.fim):'Defina o semestre final'}</h2><p>${ok.length} de ${tot} matéria${tot===1?'':'s'} concluída${ok.length===1?'':'s'}${P.fim!=null?' · faltam '+left+' semestre'+(left===1?'':'s')+' (inclui o atual)':''}</p>
+ <div class="fc-chips">${pill(rk[0]+' '+rk[1],rk[2])}${P.slack!=null&&!P.un.length?pill('folga de '+P.slack+' sem.','var(--muted)'):''}${dl?pill('📅 '+dl,'var(--muted)'):''}</div></div></div>
+ ${P.un.length?`<div class="fc-bn"><b>⚠️ Não cabem até o prazo:</b> ${P.un.map(m=>E(m.nome)).join(', ')}<br><span class="fc-sub">Revise ofertas, pré-requisitos, o máximo por semestre ou o semestre final.</span></div>`:''}
+ <div class="fc-st"><div class="fc-t"><b>${pend.length}</b><span>Pendentes</span></div><div class="fc-t"><b>${cu}</b><span>Cursando</span></div><div class="fc-t"><b>${act}</b><span>Projetos ativos</span></div><div class="fc-t"><b style="color:${P.un.length?'#e5484d':'inherit'}">${P.un.length}</b><span>Fora do prazo</span></div></div>
+ ${prio.length?`<div class="fc-sec"><h2>📚 Estude por causa da faculdade</h2><p class="fc-sub">Essas prioridades já entram no plano semanal e nos alertas da Lumi.</p>${prio.map(o=>{const w7=wkMin(o.m);return`<div class="fc-pr" style="--c:${o.m.foco?'#f59e0b':'var(--flame)'}"><b>${E(o.m.nome)}</b>${w7!=null?` <small>· ${hh(w7)} em 7 dias</small>`:''}<br><small>${E(o.w.join(' · '))}</small></div>`}).join('')}</div>`:''}
+ ${nx.length?`<div class="fc-sec"><h2>➡️ Próximo semestre (${lbl(P.cur+1)})</h2><div class="fc-row">${nx.map(m=>pill(E(m.nome),'var(--flame)')).join('')}</div></div>`:''}`}
+function vMat(X){const{f,P,C,pend,ok}=X,L=flt==='pend'?pend:flt==='foco'?pend.filter(m=>m.cur||m.foco):flt==='ok'?ok:C.slice().sort((a,b)=>(a.ok-b.ok)||P.sc(b)-P.sc(a)),
+ ch=(k,l,n)=>`<button data-f="flt" data-v="${k}" class="${flt===k?'on':''}">${l} (${n})</button>`;
+ return`<div class="fc-ft">${ch('pend','Pendentes',pend.length)}${ch('foco','Cursando e foco',pend.filter(m=>m.cur||m.foco).length)}${ch('ok','Concluídas',ok.length)}${ch('all','Todas',C.length)}</div><div class="fc-g">${L.map(m=>card(m,P,f)).join('')||'<p class="fc-em">Nada por aqui.</p>'}</div>`}
+function vProj(X){const{f,P,pj}=X;return`<p class="fc-sub" style="margin:0 0 12px">Projetos (TCC, iniciação científica etc.) não têm oferta, pré-requisito nem entram no prazo dos semestres. O prazo é opcional.</p><div class="fc-g">${pj.map(m=>card(m,P,f)).join('')||'<p class="fc-em">Nenhum projeto. Marque "Projeto" em Ajustes › Matérias do app, ou crie um novo.</p>'}</div>`}
+function vSem(X){const{f,P}=X,cols=[];
+ for(let i=P.cur;i<=Math.min(P.end,P.cur+11);i++){const L=P.list[i]||[];cols.push(`<div class="fc-sc${i===P.cur?' now':''}${i===P.fim?' end':''}"><h4>${lbl(i)}</h4><small>${i===P.cur?'atual · ':''}${i===P.fim?'🏁 final · ':''}${L.length}/${f.maxSem}</small>${L.map(m=>{const s=subj(m);return`<div class="fc-i" style="--c:${m.foco?'#f59e0b':s?s.color:'var(--flame)'}">${m.foco?'🎯 ':''}${E(m.nome)}</div>`}).join('')||'<small>livre</small>'}</div>`)}
+ if(P.un.length)cols.push(`<div class="fc-sc bad"><h4>⚠️ Fora do prazo</h4><small>${P.un.length} matéria${P.un.length>1?'s':''}</small>${P.un.map(m=>`<div class="fc-i" style="--c:#e5484d">${E(m.nome)}</div>`).join('')}</div>`);
+ return`<p class="fc-sub" style="margin:0 0 8px">Respeita pré-requisitos, quando cada matéria abre e o máximo por semestre. Cursando e foco entram primeiro; gargalos têm prioridade.</p><div class="fc-sm">${cols.join('')}</div>`}
+function vCfg(X){const{f,P,M}=X,subs=S.subjects.filter(s=>!s.arch);
+ return`<div class="fc-sec"><h2>Prazo para terminar</h2><div class="mgf"><div class="mgr"><label>Semestre final (ex.: 2028/1)<input type="text" id="fac-fim" value="${E(f.fim)}" placeholder="2028/1" maxlength="6" style="width:110px;${IS}"></label><label>Data final (editável)<input type="date" id="fac-dt" value="${E(f.dataFim)}" style="${IS}"></label><label>Máx. matérias por semestre<input type="number" id="fac-mx" min="1" max="12" value="${f.maxSem}" style="width:80px"></label><label>Nota mínima padrão<input type="text" id="fac-mg" value="${f1(f.minG)}" style="width:80px;${IS}"></label></div></div></div>
+ <div class="fc-sec"><h2>Matérias do app</h2><p class="fc-sub" style="margin:0 0 8px">Marque quais são da faculdade, quais são projetos e quais já foram concluídas.</p>
+ ${subs.map(s=>{const m=M.find(x=>x.sid===s.id);return`<div class="lzrow" style="align-items:center;flex-wrap:wrap"><span><span class="dsc" style="display:inline-block;background:${s.color};margin-right:6px"></span>${E(s.name)}</span><span style="display:flex;gap:12px;flex-wrap:wrap"><label class="lzck"><input type="checkbox" data-f="sfac" data-id="${s.id}"${m?' checked':''}> Faculdade</label>${m?`<label class="lzck"><input type="checkbox" data-f="sproj" data-id="${s.id}"${m.tipo==='proj'?' checked':''}> Projeto</label><label class="lzck"><input type="checkbox" data-f="sfin" data-id="${s.id}"${m.ok?' checked':''}> Concluída</label>`:''}</span></div>`}).join('')||'<p class="fc-sub">Sem matérias.</p>'}</div>
+ <div class="fc-sec"><h2>Nova matéria ou projeto (fora do app)</h2><div class="mgf"><div class="mgr"><label style="flex:1 1 200px">Nome<input type="text" id="fac-n" maxlength="60" style="${IS}"></label><label>Tipo<select id="fac-t" style="${IS}"><option value="">Matéria</option><option value="proj">Projeto</option></select></label><label>Quando abre<select id="fac-o" style="${IS}">${Object.entries(OF).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label><label class="lzck"><input type="checkbox" id="fac-d"> Já concluída</label></div><button class="btn main" data-f="add">Adicionar</button></div></div>`}
+function draw(){const f=F(),el=mk(),P=plan(f);memo={t:Date.now(),v:P};const M=f.mats,C=M.filter(m=>m.tipo!=='proj'),
+ pend=C.filter(m=>!m.ok).sort((a,b)=>P.sc(b)-P.sc(a)),ok=C.filter(m=>m.ok),pj=M.filter(m=>m.tipo==='proj').sort((a,b)=>(a.ok-b.ok)||P.sc(b)-P.sc(a)),
+ rk=RK[P.risk],left=P.fim!=null?Math.max(0,P.fim-P.cur+1):null;let dl='';
  if(f.dataFim){const n=Math.ceil((new Date(f.dataFim+'T12:00:00')-new Date())/864e5);dl=n>=0?n+' dias até a data final':'data final já passou'}
- const prio=M.filter(m=>!m.ok).sort((a,b)=>P.sc(b)-P.sc(a)).map(m=>({m,w:why(m,P)})).filter(o=>o.w.length).slice(0,4);
- const rows=[];for(let i=cur;i<=Math.min(P.end,cur+11);i++){const L=P.list[i]||[],full=L.length>=f.maxSem;
-  rows.push(`<div class="lzrow"><span><b>${lbl(i)}</b>${i===cur?' (atual)':''}${i===P.fim?' · 🏁 final':''}<small>${L.length}/${f.maxSem} matérias${full?' · cheio':''}</small></span><span style="text-align:right;max-width:62%">${L.map(m=>(m.foco?'🎯 ':'')+E(m.nome)).join(', ')||'<small>livre</small>'}</span></div>`)}
- const subs=S.subjects.filter(s=>!s.arch);
- el.innerHTML=`<div style="max-width:900px;margin:0 auto"><div class="ptop" style="position:static"><button class="btn" data-f="close">← Início</button><h1>🎓 Faculdade</h1></div>
- <div class="mgs" style="border-left:6px solid ${rk[2]}"><h2>${rk[0]} ${rk[1]}</h2><div class="mgf"><div class="mgr"><label>Semestre final (ex.: 2028/1)<input type="text" id="fac-fim" value="${E(f.fim)}" placeholder="2028/1" maxlength="6" style="width:110px;${IS}"></label><label>Data final (editável)<input type="date" id="fac-dt" value="${E(f.dataFim)}" style="${IS}"></label><label>Máx. matérias por semestre<input type="number" id="fac-mx" min="1" max="12" value="${f.maxSem}" style="width:80px"></label><label>Nota mínima padrão<input type="text" id="fac-mg" value="${f1(f.minG)}" style="width:80px;${IS}"></label></div></div>
- <p class="sub" style="margin:10px 0 0">Agora: <b>${lbl(cur)}</b>${P.fim!=null?` · Faltam <b>${left} semestre${left===1?'':'s'}</b> (inclui o atual)${P.slack!=null&&!P.un.length?` · folga de ${P.slack} semestre${P.slack===1?'':'s'}`:''}`:' · defina o semestre final'}${dl?' · '+dl:''}<br>${pend.length} pendente${pend.length===1?'':'s'} · ${ok.length} concluída${ok.length===1?'':'s'}${pj.length?' · '+pj.filter(m=>!m.ok).length+' projeto(s) ativo(s)':''}${P.un.length?` · <b style="color:#e5484d">${P.un.length} não cabe${P.un.length===1?'':'m'} no prazo</b>`:''}</p></div>
- ${prio.length?`<div class="mgs"><h2>📚 Estude por causa da faculdade</h2><p class="sub" style="margin-top:0">Essas prioridades já entram no plano semanal e nos alertas da Lumi.</p>${prio.map(o=>{const w7=wkMin(o.m);return`<div class="chinfo"><b>${E(o.m.nome)}</b>${w7!=null?` <small>· ${hh(w7)} estudados em 7 dias</small>`:''}<br><span class="sub">${E(o.w.join(' · '))}</span></div>`}).join('')}</div>`:''}
- <div class="mgs"><h2>🗓️ Distribuição pelos semestres</h2>${rows.join('')||'<p class="sub">Defina o semestre final.</p>'}${P.un.length?`<div class="chinfo bad"><b>Não encaixam até o prazo:</b> ${P.un.map(m=>E(m.nome)).join(', ')}</div>`:''}<p class="sub" style="margin:8px 0 0;font-size:.8rem">Respeita pré-requisitos, quando cada matéria abre e o máximo por semestre. Cursando e foco entram primeiro; gargalos têm prioridade.</p></div>
- <div class="mgs"><h2>Nova matéria</h2><div class="mgf"><div class="mgr"><label style="flex:1 1 200px">Nome<input type="text" id="fac-n" maxlength="60" style="${IS}"></label><label>Quando abre<select id="fac-o" style="${IS}">${Object.entries(OF).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label><label>Tipo<select id="fac-t" style="${IS}"><option value="">Matéria</option><option value="proj">Projeto</option></select></label><label class="lzck"><input type="checkbox" id="fac-d"> Já concluída</label></div><button class="btn main" data-f="add">Adicionar</button></div></div>
- <div class="mgs"><h2>📌 Pendentes</h2>${pend.map(m=>card(m,P,f)).join('')||'<p class="sub">Nada pendente.</p>'}</div>
- <div class="mgs"><h2>🧪 Projetos</h2><p class="sub" style="margin-top:0">Projetos da faculdade (TCC, iniciação científica etc.): não têm oferta, pré-requisito nem entram no prazo dos semestres. O prazo é opcional.</p>${pj.map(m=>card(m,P,f)).join('')||'<p class="sub">Nenhum projeto. Marque "Projeto" em Matérias do app ou ao criar uma nova.</p>'}</div>
- <div class="mgs"><h2>✅ Concluídas</h2>${ok.map(m=>card(m,P,f)).join('')||'<p class="sub">Nenhuma ainda.</p>'}</div>
- <div class="mgs"><h2>Matérias do app</h2><p class="sub" style="margin-top:0">Marque quais são da faculdade e se já terminou. Só as da faculdade entram na lista acima.</p>
- ${subs.map(s=>{const m=M.find(x=>x.sid===s.id);return`<div class="lzrow" style="align-items:center"><span><span class="dsc" style="display:inline-block;background:${s.color};margin-right:6px"></span>${E(s.name)}</span><span style="display:flex;gap:12px"><label class="lzck"><input type="checkbox" data-f="sfac" data-id="${s.id}"${m?' checked':''}> Faculdade</label>${m?`<label class="lzck"><input type="checkbox" data-f="sproj" data-id="${s.id}"${m.tipo==='proj'?' checked':''}> Projeto</label><label class="lzck"><input type="checkbox" data-f="sfin" data-id="${s.id}"${m.ok?' checked':''}> Concluída</label>`:''}</span></div>`}).join('')||'<p class="sub">Sem matérias.</p>'}</div></div>`}
-
+ const X={f,P,M,C,pend,ok,pj,rk,left,dl},TB=[['home','🏠 Visão geral'],['mat','📚 Matérias ('+C.length+')'],['proj','🧪 Projetos ('+pj.length+')'],['sem','🗓️ Semestres'],['cfg','⚙️ Ajustes']];
+ el.innerHTML=`<div class="fc-w"><div class="fc-top"><div class="fc-hd"><button class="btn" data-f="close">← Início</button><h1>🎓 Faculdade</h1></div><div class="fc-tabs" role="tablist">${TB.map(([k,l])=>`<button type="button" role="tab" data-f="tab" data-v="${k}" class="${tab===k?'on':''}">${l}</button>`).join('')}</div></div>
+ ${({home:vHome,mat:vMat,proj:vProj,sem:vSem,cfg:vCfg})[tab](X)}</div>`}
 function setTipo(m,p){if(p){m.tipo='proj';m.dep=[];m.of='todo';F().mats.forEach(x=>x.dep=x.dep.filter(d=>d!==m.id))}else delete m.tipo}
 function setOk(m,v){m.ok=!!v;if(v){m.foco=false;m.cur=false}const s=subj(m);if(s)s.fin=!!v}
 function mkTask(m,name,date,exam){const s=subj(m);if(!s)return'';const id='t'+Date.now().toString(36)+Math.random().toString(36).slice(2,4);(s.topics=s.topics||[]).push({id,name,date:date||'',prio:'media',est:0,done:false,doneAt:'',note:'',exam:!!exam});return id}
 const done=()=>{bust();save();draw();try{render()}catch(e){}};
 function onClick(e){const b=e.target.closest('[data-f]');if(!b||/^(INPUT|SELECT|TEXTAREA)$/.test(b.tagName))return;const a=b.dataset.f,f=F(),m=f.mats.find(x=>x.id===b.dataset.id),q=id=>ov.querySelector('#'+id);
- if(a==='close'){open=false;ov.style.display='none';document.body.style.overflow='';try{render()}catch(x){}return}
+ if(a==='close'){open=false;ov.style.display='none';document.body.style.overflow='';SS('fac-open',null);try{render()}catch(x){}return}
+ if(a==='tab'){tab=b.dataset.v;SS('fac-tab',tab);draw();ov.scrollTop=0;return}
+ if(a==='flt'){flt=b.dataset.v;draw();return}
  if(a==='add'){const n=q('fac-n').value.trim();if(!n){toast('Digite o nome da matéria.');return}
   const o={id:'f'+Date.now().toString(36),nome:n.slice(0,60),of:q('fac-o').value,dep:[],av:[],ent:[],ok:false,foco:false,cur:false};if(q('fac-t').value==='proj')o.tipo='proj';setOk(o,q('fac-d').checked);f.mats.push(o)}
  else if(!m)return;
@@ -205,7 +265,7 @@ function onChange(e){const t=e.target,a=t.dataset.f,f=F();
  else if(a==='nota'){const av=m.av.find(x=>x.id===t.dataset.av);if(!av)return;const v=nu(t.value);av.nota=v==null?null:Math.max(0,v)}
  else return;done()}
 
-function openFac(){open=true;mk().style.display='block';document.body.style.overflow='hidden';draw();ov.scrollTop=0}
+function openFac(){open=true;SS('fac-open','1');mk().style.display='block';document.body.style.overflow='hidden';draw();ov.scrollTop=0}
 function addBtn(){const t=document.querySelector('.tools');if(!t||document.getElementById('fac-btn'))return;
  const b=document.createElement('button');b.className='btn';b.id='fac-btn';b.type='button';b.textContent='🎓 Faculdade';b.addEventListener('click',openFac);t.insertBefore(b,t.firstChild)}
 function home(){const f=F(),a=document.getElementById('panel'),old=document.getElementById('fac-home');
@@ -219,5 +279,6 @@ const _rf=renderFeed;renderFeed=function(){_rf.apply(this,arguments);try{const e
  const P=getPlan(),pend=f.mats.filter(m=>!m.ok).sort((a,b)=>P.sc(b)-P.sc(a)).slice(0,3);
  el.insertAdjacentHTML('afterbegin',`<div class="mgs"><h2>🎓 Prioridades da faculdade</h2>${pend.map(m=>`<div class="chinfo" style="border-left:4px solid ${m.foco?'#f59e0b':'var(--line)'}"><b>${E(m.nome)}</b><br><span class="sub">${E(why(m,P).join(' · ')||'Sem urgência especial.')}</span></div>`).join('')||'<p class="sub">Tudo concluído. 🎉</p>'}</div>`)}catch(e){console.error('Faculdade:',e)}};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addBtn);else addBtn();
+if(SG('fac-open')==='1')setTimeout(openFac,0);
 window.__fac={open:openFac,alerts,brief,answer,ctx};
 })();
