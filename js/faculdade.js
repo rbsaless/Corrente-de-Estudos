@@ -40,7 +40,7 @@ function plan(f){const cur=curIdx(),fim=parseSem(f.fim),M=f.mats,by={};M.forEach
  const sem={},cnt={},list={};
  P.filter(m=>m.cur).forEach(m=>{sem[m.id]=cur;cnt[cur]=(cnt[cur]||0)+1});
  for(let i=cur;i<=end;i++){
-  const cand=P.filter(m=>!(m.id in sem)&&offered(m,i)&&m.dep.every(d=>!by[d]||by[d].ok||(d in sem&&sem[d]<i))).sort((a,b)=>sc(b)-sc(a));
+  const cand=P.filter(m=>!(m.id in sem)&&offered(m,i)&&!(m.dsem!=null&&i<=m.dsem)&&m.dep.every(d=>!by[d]||by[d].ok||(d in sem&&sem[d]<i))).sort((a,b)=>sc(b)-sc(a));
   let n=cnt[i]||0;for(const m of cand){if(n>=f.maxSem)break;sem[m.id]=i;n++}cnt[i]=n}
  P.forEach(m=>{if(m.id in sem)(list[sem[m.id]]=list[sem[m.id]]||[]).push(m)});
  const un=P.filter(m=>!(m.id in sem)),last=Math.max(cur,...Object.values(sem));
@@ -118,7 +118,9 @@ function bNotas(m){const g=gInfo(m),soma=m.modo==='soma',sc=m.max||10;
  ${m.av.map(a=>`<div class="lzrow" style="align-items:center;gap:8px;flex-wrap:wrap"><span>${E(a.n)}<small>${soma?'vale':'peso'} ${f1(a.p)}${a.dt?' · '+bd(a.dt).slice(0,5):''}</small></span><span style="display:flex;gap:6px;align-items:center">${inp('nota',m.id,a.nota==null?'':a.nota,70,'nota','data-av="'+a.id+'"')}<button class="ghost danger" data-f="avdel" data-id="${m.id}" data-av="${a.id}">✕</button></span></div>`).join('')||''}
  <div class="mgr" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:10px"><label style="font-size:.8rem;color:var(--muted)">Avaliação<br><input type="text" id="av-n-${m.id}" maxlength="40" placeholder="Ex.: Prova 1" style="width:130px;${IS}"></label><label style="font-size:.8rem;color:var(--muted)">${soma?'Pontos':'Peso'}<br><input type="text" id="av-p-${m.id}" value="1" style="width:60px;${IS}"></label><label style="font-size:.8rem;color:var(--muted)">Data<br><input type="date" id="av-d-${m.id}" style="${IS}"></label>${subj(m)?`<label class="lzck"><input type="checkbox" id="av-t-${m.id}" checked> criar prova no calendário</label>`:''}<button class="btn main" data-f="avadd" data-id="${m.id}">Adicionar</button></div>
  <p class="sub" style="margin:10px 0 0">${gTxt(g)}</p></div>`}
-function bEnt(m){return`<div style="margin:8px 0">${m.ent.map(e=>`<div class="lzrow" style="align-items:center"><span>${e.ok?'✅ ':''}${E(e.n)}<small>${e.dt?bd(e.dt):'sem data'}</small></span><span style="display:flex;gap:6px"><button class="btn" data-f="entok" data-id="${m.id}" data-e="${e.id}">${e.ok?'Reabrir':'Feito'}</button><button class="ghost danger" data-f="entdel" data-id="${m.id}" data-e="${e.id}">✕</button></span></div>`).join('')}
+function bEnt(m){const sb=subj(m),T=sb?(sb.topics||[]):[],used=new Set([...m.ent,...m.av].map(x=>x.tid).filter(Boolean));
+ const rows=m.ent.map(e=>{const tk=e.tid&&T.find(x=>x.id===e.tid);return{k:'e',id:e.id,n:e.n,dt:tk?tk.date:e.dt,ok:tk?!!tk.done:!!e.ok}}).concat(T.filter(x=>!used.has(x.id)).map(x=>({k:'t',id:x.id,n:x.name,dt:x.date,ok:!!x.done}))).sort((a,b)=>(a.ok-b.ok)||(a.dt||'9999').localeCompare(b.dt||'9999'));
+ return`<div style="margin:8px 0">${rows.map(e=>`<div class="lzrow" style="align-items:center"><span>${e.ok?'✅ ':''}${E(e.n)}<small>${e.dt?bd(e.dt):'sem data'}${e.k==='t'?' · tarefa do app':''}</small></span><span style="display:flex;gap:6px"><button class="btn" data-f="${e.k==='t'?'topok':'entok'}" data-id="${m.id}" data-e="${e.id}">${e.ok?'Reabrir':'Feito'}</button><button class="ghost danger" data-f="${e.k==='t'?'topdel':'entdel'}" data-id="${m.id}" data-e="${e.id}">✕</button></span></div>`).join('')}
  <div class="mgr" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px"><label style="font-size:.8rem;color:var(--muted)">Marco ou entrega<br><input type="text" id="en-n-${m.id}" maxlength="50" placeholder="Ex.: Entrega da monografia" style="width:190px;${IS}"></label><label style="font-size:.8rem;color:var(--muted)">Data<br><input type="date" id="en-d-${m.id}" style="${IS}"></label>${subj(m)?`<label class="lzck"><input type="checkbox" id="en-t-${m.id}" checked> criar tarefa no app</label>`:''}<button class="btn main" data-f="entadd" data-id="${m.id}">Adicionar</button></div></div>`}
 function bOf0(m,f){const others=f.mats.filter(x=>x.id!==m.id&&x.tipo!=='proj'),free=S.subjects.filter(s=>!s.arch&&(m.sid===s.id||!f.mats.some(x=>x.sid===s.id)));
  return`<label style="display:block;margin:8px 0;font-size:.85rem;color:var(--muted)">Quando abre<br><select data-f="of" data-id="${m.id}" style="${IS}">${Object.entries(OF).map(([k,v])=>`<option value="${k}"${(m.of||'todo')===k?' selected':''}>${v}</option>`).join('')}</select></label>
@@ -164,7 +166,9 @@ const css=document.createElement('style');css.textContent=`
 .fc-em{text-align:center;padding:30px 16px;color:var(--muted)}
 @media(max-width:560px){.fc-hero{grid-template-columns:1fr;justify-items:center;text-align:center}.fc-chips{justify-content:center}.fc-g{grid-template-columns:1fr}}`;
 document.head.appendChild(css);
-const SS=(k,v)=>{try{v==null?sessionStorage.removeItem(k):sessionStorage.setItem(k,v)}catch(e){}},SG=k=>{try{return sessionStorage.getItem(k)}catch(e){return null}};
+{const y=document.createElement('style');y.textContent='.fc-yl{margin-top:18px;background:color-mix(in srgb,#f5c518 22%,var(--surface));border:1px solid #f5c518;border-radius:18px;padding:14px 16px}.fc-yl h2{margin:0 0 4px;font-size:1.1rem}.fc-yr{padding:8px 0;border-top:1px solid color-mix(in srgb,#f5c518 40%,transparent)}.fc-yp{display:inline-block;padding:2px 10px;border-radius:99px;background:var(--surface);border:1px solid var(--line);font-size:.8rem}.fc-yp.pl{background:#f5c518;color:#1a1a1a;border-color:#f5c518;font-weight:700}';document.head.appendChild(y)}
+const SS=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}},SG=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const hashSet=on=>{try{history.replaceState(null,'',on?'#faculdade':location.pathname+location.search)}catch(e){}};
 let tab=['home','mat','proj','sem','cfg'].includes(SG('fac-tab'))?SG('fac-tab'):'home',flt='pend';
 const pill=(t,c)=>`<span class="fc-p" style="--c:${c}">${t}</span>`;
 const ring=(pct,col)=>`<svg viewBox="0 0 120 120" width="124" height="124" aria-label="${pct}% concluído"><circle cx="60" cy="60" r="50" fill="none" stroke="var(--track)" stroke-width="12"/><circle cx="60" cy="60" r="50" fill="none" stroke="${col}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${(pct*3.1416).toFixed(1)} 314.2" transform="rotate(-90 60 60)"/><text x="60" y="67" text-anchor="middle" font-size="26" font-weight="800" fill="var(--ink)">${pct}%</text></svg>`;
@@ -177,13 +181,14 @@ function card(m,P,f){const i=P.info[m.id]||{d:0,o:0},g=gInfo(m),sem=P.sem[m.id],
  if(i.d>0)pl.push(pill('🚧 trava '+i.d,'#f59e0b'));
  if(!pr)pl.push(pill(OF[m.of||'todo'].replace(' (anual)',''),'var(--muted)'));
  if(m.rep)pl.push(pill('↻ '+m.rep+'×','#e5484d'));
+ if(m.des&&!m.ok)pl.push(pill('🚪 Desistiu em '+lbl(m.dsem!=null?m.dsem:curIdx())+(m.des>1?' ('+m.des+'×)':''),'#f59e0b'));
  if(pr&&m.dl&&!m.ok){const n=diff(fmt(now()),m.dl);pl.push(pill('📅 '+bd(m.dl).slice(0,5)+' ('+n+'d)',n<=7?'#e5484d':'var(--muted)'))}
  if(fi&&(m.cur||fi.fal>0))pl.push(pill('🪑 '+fi.fal+'/'+fi.lim,fi.left<=0?'#e5484d':'var(--muted)'));
  const deps=m.dep.map(id=>f.mats.find(x=>x.id===id)).filter(Boolean),bt=(a,l,on)=>`<button class="fc-b${on?' on':''}" data-f="${a}" data-id="${m.id}">${l}</button>`;
  const bar=!g.none&&g.cur!=null?`<div class="fc-gb"><i style="width:${Math.min(100,g.cur/g.sc*100)}%"></i><b style="left:calc(${Math.min(100,g.min/g.sc*100)}% - 1px)"></b></div>`:'';
  return`<div class="fc-c${m.ok?' ok':''}" style="--c:${col}"><div><h3>${E(m.nome)}</h3>${deps.length&&!pr?`<p class="fc-sub">Requer: ${deps.map(d=>E(d.nome)+(d.ok?' ✓':'')).join(', ')}</p>`:''}</div>
  <div class="fc-row">${pl.join('')}</div>${w.length?`<p class="fc-sub">Por quê: ${E(w.join(' · '))}</p>`:''}${g.none?'':bar+`<p class="fc-sub">📝 ${gTxt(g)}</p>`}
- <div class="fc-ac">${m.ok?bt('ok','Reabrir'):bt('cur',pr?'🧪 Andamento':'📚 Cursando',m.cur)+bt('foco','🎯 Foco',m.foco)+bt('ok',pr?'Concluir':'Concluí')}${!pr&&(m.cur||m.ok)?bt('rep','Reprovei'):''}<button class="fc-b dng" data-f="del" data-id="${m.id}" aria-label="Remover">✕</button></div>
+ <div class="fc-ac">${m.ok?bt('ok','Reabrir'):bt('cur',pr?'🧪 Andamento':'📚 Cursando',m.cur)+bt('foco','🎯 Foco',m.foco)+bt('ok',pr?'Concluir':'Concluí')}${!pr&&(m.cur||m.ok)?bt('rep','Reprovei'):''}${!pr&&m.cur&&!m.ok?bt('des','🚪 Desisti'):''}<button class="fc-b dng" data-f="del" data-id="${m.id}" aria-label="Remover">✕</button></div>
  ${det(m.id+':n','📝 Notas e pesos'+(m.av.length?' ('+m.av.length+')':''),bNotas(m))}${det(m.id+':e','📌 Marcos e entregas'+(nm?' ('+nm+')':''),bEnt(m))}${pr?'':det(m.id+':f','🪑 Faltas',bFal(m))}${det(m.id+':o',pr?'⚙️ Tipo, prazo e matéria do app':'⚙️ Tipo, oferta, matéria do app e pré-requisitos',bOferta(m,f))}</div>`}
 function vHome(X){const{f,P,M,C,pend,ok,pj,rk,left,dl}=X;
  if(!M.length&&!f.fim)return`<div class="fc-sec fc-em"><h2 style="color:var(--ink)">Vamos começar 🎓</h2><p>Defina o semestre final e marque quais matérias do app são da faculdade.</p><button class="btn main" data-f="tab" data-v="cfg">Ir para Ajustes</button></div>`;
@@ -199,10 +204,14 @@ function vMat(X){const{f,P,C,pend,ok}=X,L=flt==='pend'?pend:flt==='foco'?pend.fi
  ch=(k,l,n)=>`<button data-f="flt" data-v="${k}" class="${flt===k?'on':''}">${l} (${n})</button>`;
  return`<div class="fc-ft">${ch('pend','Pendentes',pend.length)}${ch('foco','Cursando e foco',pend.filter(m=>m.cur||m.foco).length)}${ch('ok','Concluídas',ok.length)}${ch('all','Todas',C.length)}</div><div class="fc-g">${L.map(m=>card(m,P,f)).join('')||'<p class="fc-em">Nada por aqui.</p>'}</div>`}
 function vProj(X){const{f,P,pj}=X;return`<p class="fc-sub" style="margin:0 0 12px">Projetos (TCC, iniciação científica etc.) não têm oferta, pré-requisito nem entram no prazo dos semestres. O prazo é opcional.</p><div class="fc-g">${pj.map(m=>card(m,P,f)).join('')||'<p class="fc-em">Nenhum projeto. Marque "Projeto" em Ajustes › Matérias do app, ou crie um novo.</p>'}</div>`}
+function yel(f,P){const L=f.mats.filter(m=>!m.ok&&m.tipo!=='proj'),top=Math.min(P.end,P.cur+11);
+ const rows=L.map(m=>{const ops=[];for(let i=P.cur;i<=top;i++)if(offered(m,i)&&!(m.dsem!=null&&i<=m.dsem))ops.push(i);
+  return`<div class="fc-yr"><b>${E(m.nome)}</b>${m.des?' <small>🚪 desistida</small>':''}<div class="fc-row">${ops.length?ops.map(i=>`<span class="fc-yp${i===P.sem[m.id]?' pl':''}">${lbl(i)}</span>`).join(''):'<span style="color:#e5484d;font-weight:700">Nenhuma oferta até o prazo</span>'}</div></div>`}).join('');
+ return`<div class="fc-yl"><h2>🟡 Onde cada matéria ainda pode ser feita</h2><p class="fc-sub" style="margin:0 0 8px">Semestres em que a matéria é oferecida até o prazo. O destaque é o semestre planejado.${L.some(m=>m.des)?' Desistidas só voltam depois do semestre da desistência.':''}</p>${rows||'<p class="fc-em">Nenhuma matéria pendente.</p>'}</div>`}
 function vSem(X){const{f,P}=X,cols=[];
  for(let i=P.cur;i<=Math.min(P.end,P.cur+11);i++){const L=P.list[i]||[];cols.push(`<div class="fc-sc${i===P.cur?' now':''}${i===P.fim?' end':''}"><h4>${lbl(i)}</h4><small>${i===P.cur?'atual · ':''}${i===P.fim?'🏁 final · ':''}${L.length}/${f.maxSem}</small>${L.map(m=>{const s=subj(m);return`<div class="fc-i" style="--c:${m.foco?'#f59e0b':s?s.color:'var(--flame)'}">${m.foco?'🎯 ':''}${E(m.nome)}</div>`}).join('')||'<small>livre</small>'}</div>`)}
  if(P.un.length)cols.push(`<div class="fc-sc bad"><h4>⚠️ Fora do prazo</h4><small>${P.un.length} matéria${P.un.length>1?'s':''}</small>${P.un.map(m=>`<div class="fc-i" style="--c:#e5484d">${E(m.nome)}</div>`).join('')}</div>`);
- return`<p class="fc-sub" style="margin:0 0 8px">Respeita pré-requisitos, quando cada matéria abre e o máximo por semestre. Cursando e foco entram primeiro; gargalos têm prioridade.</p><div class="fc-sm">${cols.join('')}</div>`}
+ return`<p class="fc-sub" style="margin:0 0 8px">Respeita pré-requisitos, quando cada matéria abre e o máximo por semestre. Cursando e foco entram primeiro; gargalos têm prioridade.</p><div class="fc-sm">${cols.join('')}</div>${yel(f,P)}`}
 function vCfg(X){const{f,P,M}=X,subs=S.subjects.filter(s=>!s.arch);
  return`<div class="fc-sec"><h2>Prazo para terminar</h2><div class="mgf"><div class="mgr"><label>Semestre final (ex.: 2028/1)<input type="text" id="fac-fim" value="${E(f.fim)}" placeholder="2028/1" maxlength="6" style="width:110px;${IS}"></label><label>Data final (editável)<input type="date" id="fac-dt" value="${E(f.dataFim)}" style="${IS}"></label><label>Máx. matérias por semestre<input type="number" id="fac-mx" min="1" max="12" value="${f.maxSem}" style="width:80px"></label><label>Nota mínima padrão<input type="text" id="fac-mg" value="${f1(f.minG)}" style="width:80px;${IS}"></label></div></div></div>
  <div class="fc-sec"><h2>Matérias do app</h2><p class="fc-sub" style="margin:0 0 8px">Marque quais são da faculdade, quais são projetos e quais já foram concluídas.</p>
@@ -218,9 +227,10 @@ function draw(){const f=F(),el=mk(),P=plan(f);memo={t:Date.now(),v:P};const M=f.
 function setTipo(m,p){if(p){m.tipo='proj';m.dep=[];m.of='todo';F().mats.forEach(x=>x.dep=x.dep.filter(d=>d!==m.id))}else delete m.tipo}
 function setOk(m,v){m.ok=!!v;if(v){m.foco=false;m.cur=false}const s=subj(m);if(s)s.fin=!!v}
 function mkTask(m,name,date,exam){const s=subj(m);if(!s)return'';const id='t'+Date.now().toString(36)+Math.random().toString(36).slice(2,4);(s.topics=s.topics||[]).push({id,name,date:date||'',prio:'media',est:0,done:false,doneAt:'',note:'',exam:!!exam});return id}
+const tkOf=(m,id)=>{const sb=subj(m);return sb&&(sb.topics||[]).find(x=>x.id===id)},tgl=(tk,v)=>{tk.done=!!v;tk.doneAt=v?fmt(now()):''},rmTk=(m,id)=>{const sb=subj(m);if(sb)sb.topics=(sb.topics||[]).filter(x=>x.id!==id)};
 const done=()=>{bust();save();draw();try{render()}catch(e){}};
 function onClick(e){const b=e.target.closest('[data-f]');if(!b||/^(INPUT|SELECT|TEXTAREA)$/.test(b.tagName))return;const a=b.dataset.f,f=F(),m=f.mats.find(x=>x.id===b.dataset.id),q=id=>ov.querySelector('#'+id);
- if(a==='close'){open=false;ov.style.display='none';document.body.style.overflow='';SS('fac-open',null);try{render()}catch(x){}return}
+ if(a==='close'){open=false;ov.style.display='none';document.body.style.overflow='';SS('fac-open',null);hashSet(false);try{render()}catch(x){}return}
  if(a==='tab'){tab=b.dataset.v;SS('fac-tab',tab);draw();ov.scrollTop=0;return}
  if(a==='flt'){flt=b.dataset.v;draw();return}
  if(a==='add'){const n=q('fac-n').value.trim();if(!n){toast('Digite o nome da matéria.');return}
@@ -229,16 +239,19 @@ function onClick(e){const b=e.target.closest('[data-f]');if(!b||/^(INPUT|SELECT|
  else if(a==='ok')setOk(m,!m.ok);
  else if(a==='foco'){m.foco=!m.foco;if(m.foco)m.cur=true}
  else if(a==='cur'){m.cur=!m.cur;if(!m.cur)m.foco=false}
+ else if(a==='des'){if(!confirm('Desistir de "'+m.nome+'" neste semestre? Ela volta a pendente e será replanejada a partir do próximo semestre em que for oferecida.'))return;m.des=(m.des||0)+1;m.dsem=curIdx();setOk(m,false);m.cur=false;m.foco=false;m.av=[];m.fal=0}
  else if(a==='rep'){if(!confirm('Marcar "'+m.nome+'" como reprovada? Ela volta a pendente, as notas e faltas deste semestre são zeradas e o prazo é recalculado.'))return;m.rep=(m.rep||0)+1;setOk(m,false);m.cur=false;m.foco=false;m.av=[];m.fal=0}
  else if(a==='del'){if(!confirm('Remover "'+m.nome+'" da faculdade?'))return;f.mats=f.mats.filter(x=>x!==m);f.mats.forEach(x=>x.dep=x.dep.filter(d=>d!==m.id));const s=subj(m);if(s){delete s.fac;delete s.fin}}
  else if(a==='avadd'){const n=q('av-n-'+m.id).value.trim(),p=nu(q('av-p-'+m.id).value),d=q('av-d-'+m.id).value,c=q('av-t-'+m.id);
   if(!n){toast('Dê um nome à avaliação.');return}if(!(p>0)){toast('Informe um peso (ou pontos) maior que zero.');return}
   const av={id:'a'+Date.now().toString(36),n:n.slice(0,40),p,nota:null,dt:d||''};if(c&&c.checked&&d)av.tid=mkTask(m,n+' ('+m.nome+')',d,true);m.av.push(av)}
- else if(a==='avdel')m.av=m.av.filter(x=>x.id!==b.dataset.av);
+ else if(a==='avdel'){const av=m.av.find(x=>x.id===b.dataset.av);if(av&&av.tid)rmTk(m,av.tid);m.av=m.av.filter(x=>x.id!==b.dataset.av)}
  else if(a==='entadd'){const n=q('en-n-'+m.id).value.trim(),d=q('en-d-'+m.id).value,c=q('en-t-'+m.id);if(!n){toast('Dê um nome ao marco.');return}
   const en={id:'e'+Date.now().toString(36),n:n.slice(0,50),dt:d||'',ok:false};if(c&&c.checked)en.tid=mkTask(m,n,d,false);m.ent.push(en)}
- else if(a==='entok'){const en=m.ent.find(x=>x.id===b.dataset.e);if(en)en.ok=!en.ok}
- else if(a==='entdel')m.ent=m.ent.filter(x=>x.id!==b.dataset.e);
+ else if(a==='entok'){const en=m.ent.find(x=>x.id===b.dataset.e);if(en){const tk=en.tid&&tkOf(m,en.tid);en.ok=tk?!tk.done:!en.ok;if(tk)tgl(tk,en.ok)}}
+ else if(a==='topok'){const tk=tkOf(m,b.dataset.e);if(tk)tgl(tk,!tk.done)}
+ else if(a==='topdel'){const sb=subj(m);if(sb)sb.topics=(sb.topics||[]).filter(x=>x.id!==b.dataset.e)}
+ else if(a==='entdel'){const en=m.ent.find(x=>x.id===b.dataset.e);if(en&&en.tid)rmTk(m,en.tid);m.ent=m.ent.filter(x=>x.id!==b.dataset.e)}
  else return;done()}
 function onChange(e){const t=e.target,a=t.dataset.f,f=F();
  if(t.id==='fac-fim'){const v=t.value.trim();if(v&&parseSem(v)==null){toast('Use o formato 2028/1 ou 2028/2.');t.value=f.fim;return}f.fim=v;done();return}
@@ -265,9 +278,9 @@ function onChange(e){const t=e.target,a=t.dataset.f,f=F();
  else if(a==='nota'){const av=m.av.find(x=>x.id===t.dataset.av);if(!av)return;const v=nu(t.value);av.nota=v==null?null:Math.max(0,v)}
  else return;done()}
 
-function openFac(){open=true;SS('fac-open','1');mk().style.display='block';document.body.style.overflow='hidden';draw();ov.scrollTop=0}
+function openFac(){open=true;SS('fac-open','1');hashSet(true);mk().style.display='block';document.body.style.overflow='hidden';draw();ov.scrollTop=0}
 function addBtn(){const t=document.querySelector('.tools');if(!t||document.getElementById('fac-btn'))return;
- const b=document.createElement('button');b.className='btn';b.id='fac-btn';b.type='button';b.textContent='🎓 Faculdade';b.addEventListener('click',openFac);t.insertBefore(b,t.firstChild)}
+ const b=document.createElement('button');b.className='btn';b.id='fac-btn';b.type='button';b.textContent='🎓 Faculdade';b.addEventListener('click',openFac);const th=document.getElementById('theme');t.insertBefore(b,th?th.nextSibling:t.firstChild)}
 function home(){const f=F(),a=document.getElementById('panel'),old=document.getElementById('fac-home');
  if(!a||(!f.mats.length&&!f.fim)){if(old)old.remove();return}
  const P=getPlan(),rk=RK[P.risk],pend=f.mats.filter(m=>!m.ok&&m.tipo!=='proj'),pj=f.mats.filter(m=>!m.ok&&m.tipo==='proj').length,fc=f.mats.filter(m=>!m.ok&&m.foco).map(m=>m.nome),left=P.fim!=null?Math.max(0,P.fim-P.cur+1):null;
@@ -279,6 +292,6 @@ const _rf=renderFeed;renderFeed=function(){_rf.apply(this,arguments);try{const e
  const P=getPlan(),pend=f.mats.filter(m=>!m.ok).sort((a,b)=>P.sc(b)-P.sc(a)).slice(0,3);
  el.insertAdjacentHTML('afterbegin',`<div class="mgs"><h2>🎓 Prioridades da faculdade</h2>${pend.map(m=>`<div class="chinfo" style="border-left:4px solid ${m.foco?'#f59e0b':'var(--line)'}"><b>${E(m.nome)}</b><br><span class="sub">${E(why(m,P).join(' · ')||'Sem urgência especial.')}</span></div>`).join('')||'<p class="sub">Tudo concluído. 🎉</p>'}</div>`)}catch(e){console.error('Faculdade:',e)}};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',addBtn);else addBtn();
-if(SG('fac-open')==='1')setTimeout(openFac,0);
+if(SG('fac-open')==='1'||location.hash==='#faculdade')setTimeout(openFac,0);
 window.__fac={open:openFac,alerts,brief,answer,ctx};
 })();
