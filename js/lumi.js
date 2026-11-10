@@ -288,7 +288,7 @@ function revisao(){const p=per('week',-1,'na semana passada'),a=aResumo(p),L=INS
 const addQ=(l,f)=>{QH[nz(l).replace(/\s+/g,' ').trim()]=f};
 [['Faça um diagnóstico geral',()=>diag()],['Estou me esgotando?',()=>one('esgot')],['Minha estimativa de tempo é boa?',()=>one('estim')],['Qual tamanho de bloco funciona melhor para mim?',()=>one('bloco')],['Em que período do dia eu rendo mais?',()=>one('horario')],['Como está minha constância?',()=>one('constancia')],['Meu ritmo está subindo ou caindo?',()=>one('tendencia')],['Estou esquecendo alguma matéria?',()=>one('esquecimento')],['Minha carga da semana é viável?',()=>one('carga')],['Estou pronto para as provas?',()=>one('provas')],['Estou procrastinando?',()=>one('procr')],['Meus estudos estão equilibrados?',()=>one('equilibrio')],['Em qual matéria eu me concentro mais?',()=>one('focomat')],['Faça a revisão da semana',()=>revisao()]].forEach(([l,f])=>addQ(l,f));
 QG.splice(QG.length-1,0,['🔬 Análises profundas',['Faça um diagnóstico geral','Faça a revisão da semana','Estou me esgotando?','Minha carga da semana é viável?','Estou pronto para as provas?','Meus estudos estão equilibrados?','Estou esquecendo alguma matéria?','Meu ritmo está subindo ou caindo?','Como está minha constância?','Em que período do dia eu rendo mais?','Qual tamanho de bloco funciona melhor para mim?','Em qual matéria eu me concentro mais?','Minha estimativa de tempo é boa?','Estou procrastinando?']]);
-const PAT=[[/diagnostic|raio ?x|me analis|analis[ae] (os |meus )?(meus )?dados|insights?\b|o que (voce )?(percebeu|notou|ve nos|acha dos) (meus )?(dados|estudos)|visao geral/,()=>diag()],
+const PAT=[[/faculdade|\bufes\b|formatura|\bformar\b|semestres?\b|pre ?requisit|gargalo|reprov|nota minima|quanto (eu )?(preciso|falta) (tirar|pra passar|para passar)|minhas (notas|faltas)/,()=>window.__fac?window.__fac.answer():null],[/diagnostic|raio ?x|me analis|analis[ae] (os |meus )?(meus )?dados|insights?\b|o que (voce )?(percebeu|notou|ve nos|acha dos) (meus )?(dados|estudos)|visao geral/,()=>diag()],
  [/revisao da semana|retrospectiva|como foi minha semana|balanco da semana/,()=>revisao()],
  [/burnout|me esgotando|risco de esgot|sobrecarregando|exagerando nos estudos/,()=>one('esgot')],
  [/estimativa|estimo|subestimo|superestimo|meu tempo previsto/,()=>one('estim')],
@@ -420,6 +420,7 @@ function ALR(){const l=LM(),t0=td3(),h=new Date().getHours(),A=[],dis=l.dis||{},
  if(sh>=2)add('blk',0,'🕒',sh+' tarefas de hoje/amanhã sem horário','Posso encaixar nos seus melhores horários, sem conflito.',['Bloquear horários','p:blk']);
  const ud=P.filter(o=>!o.x.exam&&!o.x.date).length;if(ud>=3)add('dist',0,'🗂️',ud+' tópicos sem data','Posso distribuir nos dias, priorizando matérias com prova.',['Distribuir nos dias','p:dist:']);
  try{const o=elxInfo3();if(!o.act&&o.b<=-120&&o.ok)add('elx',1,'🪞','Elixir do Reembolso vale a pena','Lazer em '+lzS(o.b)+(o.d>0?' e dívida de '+hh(o.d):'')+': com o Elixir você zera estudando cerca de '+hh(o.com)+', em vez de '+(o.sem!=null?hh(o.sem):'muito mais')+'.',['Ver a conta','q:Vale a pena comprar o Elixir do Reembolso?'])}catch(e){}
+ try{(window.__fac?window.__fac.alerts():[]).forEach(x=>add(x.id,x.sev,x.ic,x.t,x.d,x.act))}catch(e){}
  return A.sort((a,b)=>b.sev-a.sev)}
 function ALN(){return ALR().filter(a=>a.sev>=1).length}
 function renderAl(){const e=$$('lm-al');if(!e)return;const A=ALR(),SV=['🟢','🔵','🟡','🔴'];
@@ -432,6 +433,7 @@ function briefObj3(){const t0=td3(),h=new Date().getHours(),c=ctx(),A=ALR(),P=pe
  try{const g=goalInfo();L.push('• Meta: '+(g.left>0?'faltam '+hh(g.left)+' (feito '+hh(g.dn)+' de '+hh(g.mn)+')':'batida ✓ ('+hh(g.dn)+' estudados)'))}catch(e){L.push('• Estudado hoje: '+hh(c.today))}
  L.push('• Tarefas de hoje: '+(T.length?T.length+' ('+hh(T.reduce((a,o)=>a+eo3(o.x),0))+')':'nenhuma')+(od?' · atrasadas: '+od:''));
  const ex=allTasks().filter(o=>o.x.exam&&!o.x.done&&!o.s.arch&&o.x.date&&o.x.date>=t0).sort((a,b)=>a.x.date<b.x.date?-1:1)[0];if(ex&&diff(t0,ex.x.date)<=30)L.push('• Próxima prova: '+ex.s.name+' em '+diff(t0,ex.x.date)+' dia'+ps3(diff(t0,ex.x.date),'','s'));
+ try{const fb=window.__fac&&window.__fac.brief();if(fb)L.push(fb)}catch(e){}
  L.push('• Lazer: '+(c.bal<0?lzS(c.bal):lzN(c.bal))+(c.debt>0?' · dívida '+hh(c.debt):''));
  const top=A.filter(a=>a.sev>=1).slice(0,3),SV=['🟢','🔵','🟡','🔴'];
  if(top.length){L.push('','Atenção:');top.forEach(a=>L.push(SV[a.sev]+' '+a.ic+' '+a.t))}else L.push('','Nenhum alerta. É só seguir o plano. 💡');
