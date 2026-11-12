@@ -150,4 +150,8 @@
     const e = document.getElementById("lg-bots");
     if (e && X.cfg().lv) e.outerHTML = build();
   }, 60000);
+
+  try {
+    if (decodeURIComponent(location.hash.slice(1)) === "ligas") route();
+  } catch (e) {}
 })();
