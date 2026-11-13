@@ -1167,10 +1167,7 @@
     `<div class="aw-noms"><div class="aw-m">${n.length > 1 ? "Indicados" : "Único indicado"}</div>${n
       .slice()
       .sort((a, b) => a.l.localeCompare(b.l, "pt"))
-      .map(
-        (x) =>
-          `<div class="aw-nm">${esc(x.l)} <b>${d.f(x.v)}</b>${x.x ? " · " + esc(x.x) : ""}</div>`,
-      )
+      .map((x) => `<div class="aw-nm">${esc(x.l)}</div>`)
       .join("")}</div>`;
   function card(c, lead) {
     const d = CBY[c.id],
