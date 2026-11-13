@@ -1260,6 +1260,51 @@
     };
   }
 
+  /* ---------- Maiores vencedores da noite ----------
+     Classificação única de quem levou mais prêmios. Só entram 3 tipos de vencedor: dia da semana, mês e matéria
+     (idiomas contam como matéria). "Mesmo vencedor" = mesmo rótulo (ex.: "Terça", "Março", "Matemática").
+     Só entra quem levou 2+ prêmios. Calculado a partir de R.c (nada novo é salvo). */
+  const TOPN = 5;
+  const kindOf = (l) =>
+    WDN.includes(l)
+      ? "Dia da semana"
+      : MN.includes(l)
+        ? "Mês"
+        : S.subjects.some((s) => s.name === l)
+          ? "Matéria"
+          : "";
+  function topWinners(R) {
+    const m = new Map();
+    R.c.forEach((c, i) => {
+      const w = c.n && c.n[0];
+      if (!w || !w.l || !CBY[c.id]) return;
+      const k = kindOf(w.l);
+      if (!k) return;
+      const e = m.get(w.l) || { l: w.l, k, cats: [], i };
+      e.cats.push(c.id);
+      m.set(w.l, e);
+    });
+    return [...m.values()]
+      .filter((e) => e.cats.length >= 2)
+      .sort((a, b) => b.cats.length - a.cats.length || a.i - b.i)
+      .slice(0, TOPN);
+  }
+  function topCards(T) {
+    return `<div class="aw-sc"><table><thead><tr><th>#</th><th>Vencedor</th><th>Tipo</th><th>Prêmios</th><th>Categorias</th></tr></thead><tbody>${T.map(
+      (e, i) =>
+        `<tr><td>${["🥇", "🥈", "🥉"][i] || i + 1 + "º"}</td><td><b>${esc(e.l)}</b></td><td>${e.k}</td><td><b>${e.cats.length}</b></td><td><span class="sub">${e.cats.map((id) => CBY[id].e + " " + esc(CBY[id].n)).join(" · ")}</span></td></tr>`,
+    ).join("")}</tbody></table></div>`;
+  }
+  function topHtml(R) {
+    const T = topWinners(R);
+    return T.length
+      ? `<div class="aw-sec"><h2>🏅 Maiores vencedores da noite</h2>${topCards(T)}</div>`
+      : "";
+  }
+  /* itens da cerimônia: categorias → Estudante do Ano → maiores vencedores (só se houver) */
+  const cerItems = (R) =>
+    R.c.concat([{ hero: 1 }], topWinners(R).length ? [{ top: 1 }] : []);
+
   /* ---------- HTML ---------- */
   const marg = (d, n) =>
     n.length < 2
@@ -1304,13 +1349,15 @@
     return `<div class="aw-sec"><h2>🔨 Recordes quebrados no ano</h2><div class="aw-grid">${R.rec.map((r, i) => `<div class="aw-card"><div class="aw-ct"><span>${i ? "🔨" : "👑"}</span>${r.n}${i ? "" : " · Recorde do Ano"}</div><div class="aw-w">${F[r.f](r.v)}</div><div class="aw-m">antes: ${F[r.f](r.p)} (+${Math.round((r.v / r.p - 1) * 100)}%)</div></div>`).join("")}</div></div>`;
   }
   function stage(Y, R) {
-    const it = R.c.concat([{ hero: 1 }]),
+    const it = cerItems(R),
       N = it.length,
       i = awCer.i,
       c = it[i],
       last = i + 1 >= N;
     let h = `<div class="aw-stage"><div class="aw-prog">Cerimônia ${Y} · ${i + 1} de ${N}</div>`;
-    if (c.hero) {
+    if (c.top) {
+      h += `<div class="aw-ct big">🏅 Maiores vencedores da noite</div><div class="aw-sec">${topCards(topWinners(R))}</div>`;
+    } else if (c.hero) {
       h +=
         `<div class="aw-ct big">🎓 Prêmio principal</div>` +
         (awCer.open
@@ -1324,7 +1371,7 @@
         ? `<div class="aw-win"><div class="aw-sparks">✨ 🎉 ✨</div><div class="aw-wbig aw-shine">${esc(w.l)}</div><div class="aw-vbig">${d.f(w.v)}${w.x ? " · " + esc(w.x) : ""}</div><div class="aw-m">${marg(d, c.n)}</div>${rankAll(d, c.n)}</div>`
         : `${noms(d, c.n)}<div class="aw-env">✉️</div><button class="btn main" data-aw="open">Abrir envelope</button>`;
     }
-    if (awCer.open)
+    if (awCer.open || c.top)
       h += `<div class="aw-act"><button class="btn main" data-aw="next">${last ? "Ver resultado final" : "Próxima categoria →"}</button></div>`;
     return (
       h +
@@ -1361,7 +1408,7 @@
       if (L.length)
         h += `<div class="aw-sec"><h2>${G[g]}</h2><div class="aw-grid">${L.map((c) => card(c, lead)).join("")}</div></div>`;
     });
-    if (!lead) h += recHtml(R);
+    if (!lead) h += recHtml(R) + topHtml(R);
     return h + cfgHtml(Y, r);
   }
   function cfgHtml(Y, r) {
@@ -1428,7 +1475,7 @@
       if (awCer) awCer.open = true;
     } else if (a === "next") {
       if (awCer) {
-        const N = resFor(awCer.Y).R.c.length + 1;
+        const N = cerItems(resFor(awCer.Y).R).length;
         if (awCer.i + 1 >= N) {
           cfg().seen[awCer.Y] = 1;
           save();
