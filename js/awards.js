@@ -1317,11 +1317,60 @@
           if (run) S++;
         } else run = false;
       });
-    return { P, S };
+    const H = yrs().filter((y) => {
+      if (y >= Y) return false;
+      const r = resFor(y);
+      return r.st === "final" && r.R.c.some((x) => x.id === c.id);
+    }).length;
+    return { P, S, H };
   }
   const badge = (Y, c) => {
     const t = wins(Y, c);
-    return t && t.P ? "P" + t.P + (t.S >= 2 ? " · S" + t.S : "") : "";
+    return t && t.P
+      ? "P" +
+          t.P +
+          (t.S >= 2 ? " · S" + t.S : "") +
+          (t.P === 1 && t.H > 0 ? " · 🆕 1ª vez" : "")
+      : "";
+  };
+
+  /* ---------- 🎤 Comentário do apresentador (só na cerimônia; regras fixas, sem IA) ---------- */
+  const say = (Y, c) => {
+    const t = wins(Y, c),
+      n = c.n || [];
+    if (t) {
+      if (t.S >= 2) return "De novo! " + t.S + "º ano seguido no topo.";
+      if (t.P >= 2)
+        return "Voltou ao topo! Já são " + t.P + " vitórias nesta categoria.";
+      if (t.P === 1 && t.H > 0) return "Novo nome no topo desta categoria!";
+    }
+    if (n.length > 1 && n[1].v > 0) {
+      if (n[0].v >= 2 * n[1].v)
+        return "Atropelou: mais que o dobro do 2º lugar!";
+      if (n[0].v !== n[1].v && (n[0].v - n[1].v) / n[0].v <= 0.03)
+        return "Disputa apertada: venceu por pouco!";
+    }
+    return "";
+  };
+  /* ---------- 📈 Comparação com o ano anterior (Estudante do Ano; só resultado final) ---------- */
+  const cmpHtml = (R) => {
+    const Y = R.Y,
+      st = R.stat;
+    if (!st || !yrs().includes(Y - 1)) return "";
+    const r0 = resFor(Y - 1);
+    if (r0.st !== "final" || !r0.R.stat) return "";
+    const f = (cur, prev, nm) => {
+      if (!(prev > 0)) return "";
+      const d = Math.round((cur / prev - 1) * 100);
+      return (d > 0 ? "▲ +" + d : d < 0 ? "▼ " + d : "= 0") + "% " + nm;
+    };
+    const parts = [
+      f(st.m, r0.R.stat.m, "horas"),
+      f(st.d, r0.R.stat.d, "dias estudados"),
+    ].filter(Boolean);
+    return parts.length
+      ? `<div class="aw-m">${parts.join(" · ")} vs ${Y - 1}</div>`
+      : "";
   };
 
   /* ---------- Maiores vencedores da noite ----------
@@ -1410,7 +1459,7 @@
   function heroHtml(R, lead) {
     const h = R.hero;
     if (!h) return "";
-    return `<div class="aw-hero"><div class="aw-ht">🎓 Estudante do Ano${lead ? " (parcial)" : ""}</div><div class="aw-big aw-shine">${h.sc}<small>/100</small></div><div class="aw-m">${h.rk}º melhor ano entre ${h.n} anos com dados</div><div class="aw-bars">${h.p.map((q) => `<div><span>${q.n}</span><div class="aw-bar"><i style="width:${Math.max(3, Math.round((q.v / q.mx) * 100))}%"></i></div><b>${F[q.f](q.v)}</b></div>`).join("")}</div></div>`;
+    return `<div class="aw-hero"><div class="aw-ht">🎓 Estudante do Ano${lead ? " (parcial)" : ""}</div><div class="aw-big aw-shine">${h.sc}<small>/100</small></div><div class="aw-m">${h.rk}º melhor ano entre ${h.n} anos com dados</div>${lead ? "" : cmpHtml(R)}<div class="aw-bars">${h.p.map((q) => `<div><span>${q.n}</span><div class="aw-bar"><i style="width:${Math.max(3, Math.round((q.v / q.mx) * 100))}%"></i></div><b>${F[q.f](q.v)}</b></div>`).join("")}</div></div>`;
   }
   function recHtml(R) {
     if (!R.rec || !R.rec.length) return "";
@@ -1434,11 +1483,12 @@
     } else {
       const d = CBY[c.id],
         w = c.n[0],
-        bg = awCer.open ? badge(Y, c) : "";
+        bg = awCer.open ? badge(Y, c) : "",
+        sy = awCer.open ? say(Y, c) : "";
       h += `<div class="aw-ct big"><span>${d.e}</span>${esc(d.n)}</div>`;
       if (d.ds) h += `<div class="aw-m">${esc(d.ds)}</div>`;
       h += awCer.open
-        ? `<div class="aw-win"><div class="aw-sparks">✨ 🎉 ✨</div><div class="aw-wbig aw-shine">${esc(w.l)}</div>${bg ? `<div class="aw-m"><b>${bg}</b> <span style="opacity:.7">(P = vezes que ganhou · S = anos seguidos)</span></div>` : ""}<div class="aw-vbig">${d.f(w.v)}${w.x ? " · " + esc(w.x) : ""}</div><div class="aw-m">${marg(d, c.n)}</div>${rankAll(d, c.n)}</div>`
+        ? `<div class="aw-win"><div class="aw-sparks">✨ 🎉 ✨</div><div class="aw-wbig aw-shine">${esc(w.l)}</div>${bg ? `<div class="aw-m"><b>${bg}</b> <span style="opacity:.7">(P = vezes que ganhou · S = anos seguidos)</span></div>` : ""}${sy ? `<div class="aw-m">🎤 ${esc(sy)}</div>` : ""}<div class="aw-vbig">${d.f(w.v)}${w.x ? " · " + esc(w.x) : ""}</div><div class="aw-m">${marg(d, c.n)}</div>${rankAll(d, c.n)}</div>`
         : `${noms(d, c.n)}<div class="aw-env">✉️</div><button class="btn main" data-aw="open">Abrir envelope</button>`;
     }
     if (awCer.open || c.top)
@@ -1640,19 +1690,23 @@
         });
         if (!m.size) return;
         const mx = Math.max(...m.values()),
-          T = [...m].filter(([, n]) => n === mx).map(([l]) => l);
+          T = [...m].filter(([, n]) => n === mx).map(([l]) => l),
+          tot = [...m.values()].reduce(
+            (q, n) => q + n,
+            0,
+          ); /* anos em que a categoria foi premiada */
         let who, cnt;
         if (mx === 1 && fin.length > 1) {
           who =
             '<span class="sub">sem repetição (um vencedor diferente por ano)</span>';
-          cnt = "—";
+          cnt = mx + "×/" + tot;
         } else {
           who =
             "<b>" +
             T.slice(0, 3).map(esc).join(", ") +
             "</b>" +
             (T.length > 3 ? " +" + (T.length - 3) : "");
-          cnt = mx + "×";
+          cnt = mx + "×/" + tot;
         }
         part.push(
           `<tr><td>${c.e} ${esc(c.n)}</td><td>${who}</td><td>${cnt}</td></tr>`,
@@ -1662,7 +1716,7 @@
         out.push(`<tr><th colspan="3">${G[g]}</th></tr>` + part.join(""));
     });
     if (!out.length) return "";
-    return `<div class="aw-sec"><h2>🏆 Maiores vencedores de cada categoria</h2><p class="sub">Conta só cerimônias já encerradas (${fin.length} ${fin.length === 1 ? "ano" : "anos"}).</p><div class="aw-sc"><table><thead><tr><th>Categoria</th><th>Maior vencedor</th><th>Vitórias</th></tr></thead><tbody>${out.join("")}</tbody></table></div></div>`;
+    return `<div class="aw-sec"><h2>🏆 Maiores vencedores de cada categoria</h2><p class="sub">Conta só cerimônias já encerradas (${fin.length} ${fin.length === 1 ? "ano" : "anos"}). Ex.: 2×/3 = ganhou 2 dos 3 anos em que a categoria foi premiada.</p><div class="aw-sc"><table><thead><tr><th>Categoria</th><th>Maior vencedor</th><th>Vitórias/anos</th></tr></thead><tbody>${out.join("")}</tbody></table></div></div>`;
   }
   function draw() {
     if (curPage !== "awards") return;
