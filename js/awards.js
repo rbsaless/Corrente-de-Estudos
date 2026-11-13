@@ -1291,6 +1291,39 @@
     };
   }
 
+  /* ---------- P e S ao lado do vencedor ----------
+     P = quantas vezes esse vencedor já ganhou ESTA categoria (contando o ano Y).
+     S = quantos anos seguidos ele vem ganhando, terminando em Y (só é mostrado a partir de 2).
+     Só vale para vencedores que podem se repetir; rótulos com data (ex.: "Sábado 12/03") nunca repetem e ficam sem selo.
+     Calculado na hora a partir dos resultados já salvos dos anos encerrados (nada novo é salvo). */
+  function wins(Y, c) {
+    const w = c.n && c.n[0];
+    if (!w || !w.l || /\d{1,2}\/\d{1,2}/.test(w.l)) return null;
+    const won = (y) => {
+      const r = resFor(y);
+      if (r.st !== "final") return false;
+      const k = r.R.c.find((x) => x.id === c.id);
+      return !!(k && k.n[0] && k.n[0].l === w.l);
+    };
+    let P = 0,
+      S = 0,
+      run = true;
+    yrs()
+      .filter((y) => y <= Y)
+      .reverse()
+      .forEach((y) => {
+        if (won(y)) {
+          P++;
+          if (run) S++;
+        } else run = false;
+      });
+    return { P, S };
+  }
+  const badge = (Y, c) => {
+    const t = wins(Y, c);
+    return t && t.P ? "P" + t.P + (t.S >= 2 ? " · S" + t.S : "") : "";
+  };
+
   /* ---------- Maiores vencedores da noite ----------
      Classificação única de quem levou mais prêmios. Só entram 3 tipos de vencedor: dia da semana, mês e matéria
      (idiomas contam como matéria). "Mesmo vencedor" = mesmo rótulo (ex.: "Terça", "Março", "Matemática").
@@ -1304,7 +1337,7 @@
         : S.subjects.some((s) => s.name === l)
           ? "Matéria"
           : "";
-  function topWinners(R) {
+  function tally(R) {
     const m = new Map();
     R.c.forEach((c, i) => {
       const w = c.n && c.n[0];
@@ -1315,7 +1348,10 @@
       e.cats.push(c.id);
       m.set(w.l, e);
     });
-    return [...m.values()]
+    return [...m.values()];
+  }
+  function topWinners(R) {
+    return tally(R)
       .filter((e) => e.cats.length >= 2)
       .sort((a, b) => b.cats.length - a.cats.length || a.i - b.i)
       .slice(0, TOPN);
@@ -1365,10 +1401,11 @@
       .sort((a, b) => a.l.localeCompare(b.l, "pt"))
       .map((x) => `<div class="aw-nm">${esc(x.l)}</div>`)
       .join("")}</div>`;
-  function card(c, lead) {
+  function card(c, lead, Y) {
     const d = CBY[c.id],
-      w = c.n[0];
-    return `<div class="aw-card${lead ? " lead" : ""}"><div class="aw-ct"><span>${d.e}</span>${esc(d.n)}</div>${d.ds ? `<div class="aw-m">${esc(d.ds)}</div>` : ""}<div class="aw-w">${lead ? "👑" : "🥇"} ${esc(w.l)}</div><div class="aw-v">${d.f(w.v)}${w.x ? " · " + esc(w.x) : ""}</div>${lead ? '<div class="aw-m">líder na parcial</div>' : `<div class="aw-m">${marg(d, c.n)}</div>${nom(d, c.n)}`}</div>`;
+      w = c.n[0],
+      bg = !lead && Y ? badge(Y, c) : "";
+    return `<div class="aw-card${lead ? " lead" : ""}"><div class="aw-ct"><span>${d.e}</span>${esc(d.n)}</div>${d.ds ? `<div class="aw-m">${esc(d.ds)}</div>` : ""}<div class="aw-w">${lead ? "👑" : "🥇"} ${esc(w.l)}${bg ? ` <span style="font-size:.6em;font-weight:600;opacity:.85;white-space:nowrap">${bg}</span>` : ""}</div><div class="aw-v">${d.f(w.v)}${w.x ? " · " + esc(w.x) : ""}</div>${lead ? '<div class="aw-m">líder na parcial</div>' : `<div class="aw-m">${marg(d, c.n)}</div>${nom(d, c.n)}`}</div>`;
   }
   function heroHtml(R, lead) {
     const h = R.hero;
@@ -1396,11 +1433,12 @@
           : `<div class="aw-env">✉️</div><button class="btn main" data-aw="open">Abrir envelope</button>`);
     } else {
       const d = CBY[c.id],
-        w = c.n[0];
+        w = c.n[0],
+        bg = awCer.open ? badge(Y, c) : "";
       h += `<div class="aw-ct big"><span>${d.e}</span>${esc(d.n)}</div>`;
       if (d.ds) h += `<div class="aw-m">${esc(d.ds)}</div>`;
       h += awCer.open
-        ? `<div class="aw-win"><div class="aw-sparks">✨ 🎉 ✨</div><div class="aw-wbig aw-shine">${esc(w.l)}</div><div class="aw-vbig">${d.f(w.v)}${w.x ? " · " + esc(w.x) : ""}</div><div class="aw-m">${marg(d, c.n)}</div>${rankAll(d, c.n)}</div>`
+        ? `<div class="aw-win"><div class="aw-sparks">✨ 🎉 ✨</div><div class="aw-wbig aw-shine">${esc(w.l)}</div>${bg ? `<div class="aw-m"><b>${bg}</b> <span style="opacity:.7">(P = vezes que ganhou · S = anos seguidos)</span></div>` : ""}<div class="aw-vbig">${d.f(w.v)}${w.x ? " · " + esc(w.x) : ""}</div><div class="aw-m">${marg(d, c.n)}</div>${rankAll(d, c.n)}</div>`
         : `${noms(d, c.n)}<div class="aw-env">✉️</div><button class="btn main" data-aw="open">Abrir envelope</button>`;
     }
     if (awCer.open || c.top)
@@ -1434,11 +1472,13 @@
         `<p class="sub">Sem dados suficientes em ${Y} para premiar.</p>` +
         cfgHtml(Y, r)
       );
+    if (!lead)
+      h += `<p class="sub">Ao lado dos vencedores: P = vezes que ganhou a categoria · S = anos seguidos vencendo (só aparece a partir de 2).</p>`;
     h += heroHtml(R, lead);
     Object.keys(G).forEach((g) => {
       const L = R.c.filter((c) => CBY[c.id].g === g);
       if (L.length)
-        h += `<div class="aw-sec"><h2>${G[g]}</h2><div class="aw-grid">${L.map((c) => card(c, lead)).join("")}</div></div>`;
+        h += `<div class="aw-sec"><h2>${G[g]}</h2><div class="aw-grid">${L.map((c) => card(c, lead, Y)).join("")}</div></div>`;
     });
     if (!lead) h += recHtml(R) + topHtml(R);
     return h + cfgHtml(Y, r);
@@ -1465,7 +1505,97 @@
         return `<tr><td><button class="btn" data-aw="tab" data-v="${y}">${y}</button></td><td>${hh(s.m || 0)}</td><td>${s.d || 0}</td><td>${s.st || 0}</td><td>${R.hero ? R.hero.sc + "/100" : "—"}</td><td>${w("mat")}</td><td>${w("mes")}</td><td>${(R.rec || []).length}</td><td>${r.st === "final" ? "🏆" : r.st === "frozen" ? "🔒" : "⏳"}</td></tr>`;
       })
       .join("");
-    return `<div class="aw-sec"><h2>🏛️ Hall da fama</h2><div class="aw-sc"><table><thead><tr><th>Ano</th><th>Horas</th><th>Dias</th><th>Streak</th><th>Estudante do Ano</th><th>Matéria do Ano</th><th>Melhor mês</th><th>Recordes</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>${hofCats(ys)}`;
+    return `<div class="aw-sec"><h2>🏛️ Hall da fama</h2><div class="aw-sc"><table><thead><tr><th>Ano</th><th>Horas</th><th>Dias</th><th>Streak</th><th>Estudante do Ano</th><th>Matéria do Ano</th><th>Melhor mês</th><th>Recordes</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>${hofRecs(ys)}${hofCats(ys)}`;
+  }
+  /* recordes das premiações, somando só as cerimônias já encerradas */
+  function hofRecs(ys) {
+    const fin = ys
+      .map((y) => ({ y, r: resFor(y) }))
+      .filter((o) => o.r.st === "final");
+    if (!fin.length) return "";
+    const best = (arr, key) => {
+      if (!arr.length) return [];
+      const mx = Math.max(...arr.map(key));
+      return arr.filter(
+        (x) => key(x) === mx,
+      ); /* todos que empatam no recorde */
+    };
+    const lst = (L, f) =>
+      L.slice(0, 3).map(f).join("<br>") +
+      (L.length > 3 ? "<br>+" + (L.length - 3) : "");
+    const rows = [];
+    /* 1) vencedor com mais prêmios numa única noite */
+    const nights = [];
+    fin.forEach(({ y, r }) =>
+      tally(r.R).forEach((e) => nights.push({ y, l: e.l, n: e.cats.length })),
+    );
+    const a = best(nights, (x) => x.n);
+    if (a.length && a[0].n >= 2)
+      rows.push([
+        "🏅 Mais prêmios numa noite",
+        lst(a, (x) => `<b>${esc(x.l)}</b> · ${x.y}`),
+        pn(a[0].n, "prêmio", "prêmios"),
+      ]);
+    /* 2) e 3) o mesmo vencedor na mesma categoria, em vários anos (rótulos com data nunca repetem, ficam de fora) */
+    const byCat = new Map();
+    fin.forEach(({ y, r }) =>
+      r.R.c.forEach((c) => {
+        const w = c.n && c.n[0];
+        if (!w || !w.l || !CBY[c.id] || /\d{1,2}\/\d{1,2}/.test(w.l)) return;
+        const k = c.id + "\u0001" + w.l,
+          e = byCat.get(k) || { id: c.id, l: w.l, ys: [] };
+        e.ys.push(y);
+        byCat.set(k, e);
+      }),
+    );
+    const reps = [...byCat.values()].map((e) => {
+      e.ys.sort((x, z) => x - z);
+      let run = 1,
+        rs = e.ys[0],
+        bn = 1,
+        bs = e.ys[0];
+      for (let i = 1; i < e.ys.length; i++) {
+        if (e.ys[i] === e.ys[i - 1] + 1) run++;
+        else {
+          run = 1;
+          rs = e.ys[i];
+        }
+        if (run > bn) {
+          bn = run;
+          bs = rs;
+        }
+      }
+      return { id: e.id, l: e.l, P: e.ys.length, S: bn, from: bs };
+    });
+    const who = (x) =>
+      `<b>${esc(x.l)}</b> · ${CBY[x.id].e} ${esc(CBY[x.id].n)}`;
+    const b = best(reps, (x) => x.P);
+    if (b.length && b[0].P >= 2)
+      rows.push([
+        "🔁 Mais vitórias na mesma categoria",
+        lst(b, who),
+        b[0].P + "×",
+      ]);
+    const c = best(reps, (x) => x.S);
+    if (c.length && c[0].S >= 2)
+      rows.push([
+        "🔥 Maior sequência de anos seguidos",
+        lst(c, (x) => who(x) + " · " + x.from + "–" + (x.from + x.S - 1)),
+        c[0].S + " anos",
+      ]);
+    /* 4) maior nota de Estudante do Ano */
+    const hs = fin
+      .filter((o) => o.r.R.hero)
+      .map((o) => ({ y: o.y, sc: o.r.R.hero.sc }));
+    const d = best(hs, (x) => x.sc);
+    if (d.length)
+      rows.push([
+        "🎓 Maior nota de Estudante do Ano",
+        lst(d, (x) => String(x.y)),
+        d[0].sc + "/100",
+      ]);
+    if (!rows.length) return "";
+    return `<div class="aw-sec"><h2>🏛️ Recordes das premiações</h2><p class="sub">Conta só cerimônias já encerradas (${fin.length} ${fin.length === 1 ? "ano" : "anos"}).</p><div class="aw-sc"><table><thead><tr><th>Recorde</th><th>Quem</th><th>Valor</th></tr></thead><tbody>${rows.map((q) => `<tr><td>${q[0]}</td><td>${q[1]}</td><td><b>${q[2]}</b></td></tr>`).join("")}</tbody></table></div></div>`;
   }
   /* maiores vencedores de cada categoria, somando só as cerimônias já encerradas */
   function hofCats(ys) {
