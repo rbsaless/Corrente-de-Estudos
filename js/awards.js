@@ -40,6 +40,17 @@
     pdv: "Perdão de dívida",
     lzx: "Lazer extra",
   };
+  const LANG0 = [
+    "korean",
+    "english",
+    "japanese",
+    "arabic",
+    "chinese",
+    "italian",
+    "spanish",
+    "french",
+    "indu",
+  ];
   const LV = ["", "Leve", "Forte", "Extremo"],
     LVR = { leve: 1, forte: 2, extremo: 3 };
   const FRZ = 60; /* dias antes da cerimônia em que as parciais congelam */
@@ -64,6 +75,7 @@
     b: (v) => pn(v, "bloco", "blocos"),
     t: (v) => pn(v, "tarefa", "tarefas"),
     mt: (v) => pn(v, "matéria", "matérias"),
+    id: (v) => pn(v, "idioma", "idiomas"),
     st: (v) => (Math.round(v * 100) / 100 + "").replace(".", ",") + " ★",
     lv: (v) => "nível " + Math.round(v),
     up: (v) => "+" + pn(v, "liga", "ligas"),
@@ -90,6 +102,14 @@
     if (!Array.isArray(a.gen))
       a.gen = S.subjects
         .filter((s) => GEN0.includes(String(s.name).trim().toLowerCase()))
+        .map((s) => s.id);
+    if (!Array.isArray(a.lang))
+      a.lang = S.subjects
+        .filter(
+          (s) =>
+            !a.gen.includes(s.id) &&
+            LANG0.some((n) => String(s.name).toLowerCase().includes(n)),
+        )
         .map((s) => s.id);
     if (!a.init) {
       a.init = 1;
@@ -267,7 +287,17 @@
     };
   }
   const P = (Y, to) =>
-    memo("p" + Y + "|" + to + "|" + cfg().gen.join(","), () => prep(Y, to));
+    memo(
+      "p" +
+        Y +
+        "|" +
+        to +
+        "|" +
+        cfg().gen.join(",") +
+        "|" +
+        cfg().lang.join(","),
+      () => prep(Y, to),
+    );
 
   /* ---------- auxiliares das categorias ---------- */
   const monthsC = (p) => {
@@ -279,6 +309,8 @@
     return r;
   };
   const dim = (Y, i) => new Date(Y, i + 1, 0).getDate();
+  const lg = (p) =>
+    p.SB.filter((o) => cfg().lang.includes(o.id) && !o.gen && o.tot > 0);
   const ng = (p) => p.SB.filter((o) => !o.gen && o.tot > 0);
   const LOGY = (p) =>
     (S.log || []).filter((x) => x.f > 0 && x.d >= p.from && x.d <= p.to);
@@ -337,6 +369,7 @@
     t: "📅 Tempo e constância",
     h: "⏰ Horários e blocos",
     m: "📚 Matérias",
+    i: "🌍 Idiomas",
     g: "🌐 Prêmios gerais",
     f: "🧠 Foco",
     k: "✅ Tarefas",
@@ -692,6 +725,93 @@
           ),
         );
         return r;
+      },
+    },
+    {
+      id: "idi",
+      g: "i",
+      e: "🌍",
+      n: "Idioma do Ano",
+      f: F.min,
+      tn: "mais dias estudados",
+      fn: (p) => lg(p).map((o) => ({ l: o.nm, v: o.tot, t: o.n })),
+    },
+    {
+      id: "idc",
+      g: "i",
+      e: "🗣️",
+      n: "Idioma mais constante",
+      f: F.d,
+      tn: "mais horas",
+      fn: (p) => lg(p).map((o) => ({ l: o.nm, v: o.n, t: o.tot })),
+    },
+    {
+      id: "ipo",
+      g: "i",
+      e: "🎌",
+      n: "Poliglota (mais idiomas no mesmo dia)",
+      f: F.id,
+      tn: "mais horas no dia",
+      fn: (p) => {
+        const m = {};
+        lg(p).forEach((o) =>
+          Object.keys(o.days).forEach((k) =>
+            (m[k] = m[k] || new Set()).add(o.id),
+          ),
+        );
+        return Object.keys(m).map((k) => ({
+          l: DIAS[(parse(k).getDay() + 6) % 7] + " " + bd(k),
+          v: m[k].size,
+          t: p.D[k],
+        }));
+      },
+    },
+    {
+      id: "ire",
+      g: "i",
+      e: "🌱",
+      n: "Idioma Revelação (novo do ano)",
+      f: F.min,
+      tn: "mais dias estudados",
+      fn: (p) =>
+        lg(p)
+          .filter((o) => !o.before)
+          .map((o) => ({ l: o.nm, v: o.tot, t: o.n })),
+    },
+    {
+      id: "icb",
+      g: "i",
+      e: "🔄",
+      n: "Idioma Comeback (voltou a ser estudado)",
+      f: F.dh,
+      tn: "mais horas no ano",
+      fn: (p) =>
+        lg(p)
+          .filter((o) => o.before && o.tot > o.prevTot)
+          .map((o) => ({
+            l: o.nm,
+            v: o.tot - o.prevTot,
+            t: o.tot,
+            x: hh(o.prevTot) + " → " + hh(o.tot),
+          })),
+    },
+    {
+      id: "imm",
+      g: "i",
+      e: "📖",
+      n: "Maratona de idiomas (melhor dia)",
+      f: F.min,
+      tn: "dia mais recente",
+      fn: (p) => {
+        const m = {};
+        lg(p).forEach((o) =>
+          Object.keys(o.days).forEach((k) => (m[k] = (m[k] || 0) + o.days[k])),
+        );
+        return Object.keys(m).map((k) => ({
+          l: DIAS[(parse(k).getDay() + 6) % 7] + " " + bd(k),
+          v: m[k],
+          t: +k.replace(/-/g, ""),
+        }));
       },
     },
     {
@@ -1106,7 +1226,7 @@
       });
     });
     return {
-      v: 2,
+      v: 3,
       Y,
       to,
       at: Date.now(),
@@ -1122,9 +1242,9 @@
       t = fmt(now()),
       cut = cutoff(Y),
       fr = addK(C, -FRZ),
-      gk = a.gen.join(",");
+      gk = a.gen.join(",") + "|" + a.lang.join(",");
     if (t >= C) {
-      if (!a.res[Y] || a.res[Y].v !== 2) {
+      if (!a.res[Y] || a.res[Y].v !== 3) {
         a.res[Y] = build(Y, cut);
         save();
       }
@@ -1248,7 +1368,8 @@
     const a = cfg();
     return `<details class="aw-cfg"><summary>⚙️ Configurar ${Y}</summary><div class="aw-row"><label>Data da cerimônia <input type="date" id="aw-cd" data-y="${Y}" value="${cerDate(Y)}"></label><span class="sub">Os dados contam até o dia anterior.</span></div>
  <div class="aw-row">${r.st === "final" ? `<button class="btn" data-aw="redo" data-y="${Y}">🎬 Rever cerimônia</button><button class="btn" data-aw="recalc" data-y="${Y}">♻️ Recalcular resultado</button>` : ""}</div>
- <details><summary>🧩 Atividades que não são matérias (ficam fora das categorias de matéria)</summary><div class="aw-gen">${S.subjects.map((s) => `<label><input type="checkbox" data-awgen="${s.id}"${a.gen.includes(s.id) ? " checked" : ""}> ${esc(s.name)}</label>`).join("")}</div><p class="sub">Depois de mudar, use "Recalcular" nos anos já encerrados.</p></details></details>`;
+ <details><summary>🧩 Atividades que não são matérias (ficam fora das categorias de matéria)</summary><div class="aw-gen">${S.subjects.map((s) => `<label><input type="checkbox" data-awgen="${s.id}"${a.gen.includes(s.id) ? " checked" : ""}> ${esc(s.name)}</label>`).join("")}</div><p class="sub">Depois de mudar, use "Recalcular" nos anos já encerrados.</p></details>
+ <details><summary>🌍 Matérias que contam como idioma</summary><div class="aw-gen">${S.subjects.map((s) => `<label><input type="checkbox" data-awlang="${s.id}"${a.lang.includes(s.id) ? " checked" : ""}> ${esc(s.name)}</label>`).join("")}</div></details></details>`;
   }
   function hof(ys) {
     const rows = ys
@@ -1349,6 +1470,14 @@
       save();
       render();
       toast("Data da cerimônia de " + Y + " atualizada.");
+    } else if (t.dataset && t.dataset.awlang) {
+      const a = cfg(),
+        id = t.dataset.awlang;
+      a.lang = a.lang.filter((x) => x !== id);
+      if (t.checked) a.lang.push(id);
+      clr();
+      save();
+      render();
     } else if (t.dataset && t.dataset.awgen) {
       const a = cfg(),
         id = t.dataset.awgen;
