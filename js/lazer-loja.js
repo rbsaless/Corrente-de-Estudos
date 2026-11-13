@@ -340,7 +340,7 @@ SHOP.push(
  {id:'bau',e:'🎁',n:'Baú misterioso',d:'Prêmio surpresa: lazer, Elos, passe de ociosidade, boost, perdão de dívida ou até um ticket de videogame.',p:110,l:3});
 const TK3={tjg:{m:120,e:'🎟️',n:'Ingresso de jogo'},tvg:{m:45,e:'🎮',n:'Ticket de videogame'},tsr:{m:50,e:'🍿',n:'Sessão de série'},tgl:{m:0,e:'🍕',n:'Vale-guloseima'}};
 function tkInv(){const h=shCfg();h.inv=(Array.isArray(h.inv)?h.inv:[]).filter(x=>x.x>Date.now()&&TK3[x.k]);return h.inv}
-function tkAdd(k){tkInv().push({id:'k'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),k,t:Date.now(),x:Date.now()+30*864e5})}
+function tkGive(k){tkInv().push({id:'k'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),k,t:Date.now(),x:Date.now()+30*864e5})}
 function shBuy(id){if(!['elx','gld','tjg','tvg','tsr','tgl','bau'].includes(id))return shBuy0(id);
  const it=SHOP.find(x=>x.id===id),h=shCfg(),n=Date.now(),I=shInfo(it),z=lzCfg();let msg='';
  if(I.left<=0)return toast('Limite semanal atingido para este item.');if(elBal()<I.price)return toast('Elos insuficientes.');
@@ -348,7 +348,7 @@ function shBuy(id){if(!['elx','gld','tjg','tvg','tsr','tgl','bau'].includes(id))
  if(id==='elx'&&lzBal()>=0&&lzDebt()<=0)return toast('Você não tem lazer negativo nem dívida. O elixir não foi usado.');
  if(id==='elx'){h.elx=Math.max(n,h.elx||0)+5*36e5;msg='🪞 Elixir ativo até '+idHM(h.elx)+': estudar abate dívida e lazer negativo 1:1.'}
  else if(id==='gld'){h.gld=Math.max(n,h.gld||0)+2*36e5;msg='🌅 Hora Dourada até '+idHM(h.gld)+': lazer ganho em dobro.'}
- else if(TK3[id]){tkAdd(id);msg=TK3[id].e+' '+TK3[id].n+' guardado em "Meus tickets".'}
+ else if(TK3[id]){tkGive(id);msg=TK3[id].e+' '+TK3[id].n+' guardado em "Meus tickets".'}
  else if(id==='bau'){const R=[[30,'lz'],[20,'el'],[20,'pas'],[15,'bst'],[10,'pdv'],[5,'tvg']];let r=Math.random()*100,k='lz';for(const o of R){if(r<o[0]){k=o[1];break}r-=o[0]}
   if(k==='pdv'&&lzDebt()<=0)k='lz';if(k==='lz'&&!z.on)k='el';
   if(k==='lz'){z.led.push({id:lzId(),t:n,type:'chal',min:20,note:'🎁 Baú misterioso: lazer'});msg='🎁 Baú: +20 min de lazer!'}
@@ -356,7 +356,7 @@ function shBuy(id){if(!['elx','gld','tjg','tvg','tsr','tgl','bau'].includes(id))
   else if(k==='pas'){const d=idCfg();d.pass=Math.max(n,d.pass||0)+36e5;msg='🎁 Baú: 1h de passe de ociosidade!'}
   else if(k==='bst'){h.bst=Math.max(n,h.bst)+6*36e5;msg='🎁 Baú: boost de +25% por 6h!'}
   else if(k==='pdv'){z.led.push({id:lzId(),t:n,type:'pay',min:0,st:Math.min(30,lzDebt()),nm:'Baú misterioso'});msg='🎁 Baú: −30 min de dívida de estudo!'}
-  else{tkAdd('tvg');msg='🎁 Baú: um Ticket de videogame!'}}
+  else{tkGive('tvg');msg='🎁 Baú: um Ticket de videogame!'}}
  elCfg().s+=I.price;h.buy.push({id,t:n});h.buy=h.buy.filter(x=>x.t>n-14*864e5);save();render();toast(msg)}
 function tkUse(id){const h=shCfg(),L=tkInv(),i=L.findIndex(x=>x.id===id);if(i<0)return;const it=L[i],D=TK3[it.k],z=lzCfg(),n=Date.now(),t=fmt(now()),mn=stkMin(t),dn=Math.round(stkTot(t));
  if(dn<mn)return toast('Primeiro bata a meta mínima de hoje ('+hh(dn)+' de '+hh(mn)+'). O ticket espera por você.');
