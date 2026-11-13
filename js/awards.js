@@ -1505,7 +1505,34 @@
         return `<tr><td><button class="btn" data-aw="tab" data-v="${y}">${y}</button></td><td>${hh(s.m || 0)}</td><td>${s.d || 0}</td><td>${s.st || 0}</td><td>${R.hero ? R.hero.sc + "/100" : "—"}</td><td>${w("mat")}</td><td>${w("mes")}</td><td>${(R.rec || []).length}</td><td>${r.st === "final" ? "🏆" : r.st === "frozen" ? "🔒" : "⏳"}</td></tr>`;
       })
       .join("");
-    return `<div class="aw-sec"><h2>🏛️ Hall da fama</h2><div class="aw-sc"><table><thead><tr><th>Ano</th><th>Horas</th><th>Dias</th><th>Streak</th><th>Estudante do Ano</th><th>Matéria do Ano</th><th>Melhor mês</th><th>Recordes</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>${hofRecs(ys)}${hofCats(ys)}`;
+    return `<div class="aw-sec"><h2>🏛️ Hall da fama</h2><div class="aw-sc"><table><thead><tr><th>Ano</th><th>Horas</th><th>Dias</th><th>Streak</th><th>Estudante do Ano</th><th>Matéria do Ano</th><th>Melhor mês</th><th>Recordes</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>${hofRank(ys)}${hofRecs(ys)}${hofCats(ys)}`;
+  }
+  /* classificação geral: soma de todos os prêmios de todas as cerimônias encerradas (só dia da semana, mês e matéria) */
+  function hofRank(ys) {
+    const fin = ys
+      .map((y) => ({ y, r: resFor(y) }))
+      .filter((o) => o.r.st === "final");
+    if (!fin.length) return "";
+    const m = new Map();
+    fin.forEach(({ y, r }) =>
+      tally(r.R).forEach((e) => {
+        const o = m.get(e.l) || { l: e.l, k: e.k, n: 0, ys: new Set() };
+        o.n += e.cats.length;
+        o.ys.add(y);
+        m.set(e.l, o);
+      }),
+    );
+    const T = [...m.values()]
+      .sort(
+        (a, b) =>
+          b.n - a.n || b.ys.size - a.ys.size || a.l.localeCompare(b.l, "pt"),
+      )
+      .slice(0, 10);
+    if (!T.length) return "";
+    return `<div class="aw-sec"><h2>🏆 Classificação geral dos maiores vencedores</h2><p class="sub">Soma de todos os prêmios de todas as cerimônias encerradas (${fin.length} ${fin.length === 1 ? "ano" : "anos"}). Entram dia da semana, mês e matéria; desempate por mais cerimônias vencidas.</p><div class="aw-sc"><table><thead><tr><th>#</th><th>Vencedor</th><th>Tipo</th><th>Prêmios</th><th>Cerimônias</th></tr></thead><tbody>${T.map(
+      (o, i) =>
+        `<tr><td>${["🥇", "🥈", "🥉"][i] || i + 1 + "º"}</td><td><b>${esc(o.l)}</b></td><td>${o.k}</td><td><b>${o.n}</b></td><td>${o.ys.size}</td></tr>`,
+    ).join("")}</tbody></table></div></div>`;
   }
   /* recordes das premiações, somando só as cerimônias já encerradas */
   function hofRecs(ys) {
