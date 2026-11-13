@@ -441,7 +441,7 @@
       f: F.d,
       tn: "mais horas na sequência",
       fn: (p) =>
-        p.R.map((r) => ({ l: bd(r.a) + " a " + bd(r.b), v: r.n, t: r.m })),
+        p.R.map((r) => ({ l: "Começou em " + bd(r.a), v: r.n, t: r.m })),
     },
     {
       id: "mco",
@@ -565,12 +565,19 @@
       n: "Foco absoluto (maior bloco contínuo)",
       f: F.min,
       tn: "bloco mais recente",
-      fn: (p) =>
-        p.ses.map((x) => ({
-          l: x.o.nm + " · " + bd(x.k) + " " + hm(x.a),
+      fn: (p) => {
+        const b =
+          {}; /* um bloco por matéria/dia (o maior), para não repetir a mesma linha sem o horário */
+        p.ses.forEach((x) => {
+          const k = x.o.id + "|" + x.k;
+          if (!b[k] || x.m > b[k].m) b[k] = x;
+        });
+        return Object.values(b).map((x) => ({
+          l: x.o.nm + " · " + bd(x.k),
           v: x.m,
           t: +x.a,
-        })),
+        }));
+      },
     },
     {
       id: "cro",
@@ -625,6 +632,29 @@
           t: p.D[k],
         }));
       },
+    },
+    {
+      id: "mai",
+      g: "m",
+      e: "🏔️",
+      n: "Maioral (mais horas acumuladas)",
+      ds: "Matéria com mais horas somadas desde o seu primeiro estudo até o fim deste ano.",
+      f: F.min,
+      tn: "mais dias estudados",
+      fn: (p) =>
+        S.subjects
+          .filter((s) => !cfg().gen.includes(s.id))
+          .map((s) => {
+            let m = 0,
+              n = 0;
+            Object.keys(s.days).forEach((k) => {
+              if (k <= p.to && (s.days[k] || 0) > 0) {
+                m += s.days[k];
+                n++;
+              }
+            });
+            return { l: s.name, v: m, t: n };
+          }),
     },
     {
       id: "mat",
@@ -1142,14 +1172,15 @@
       id: "xpl",
       g: "s",
       e: "📈",
-      n: "Maior nível de XP numa sequência (estimado)",
+      n: "Sequência com maior nível de XP (estimado)",
+      ds: "Cada sequência de dias seguidos de estudo acumula XP (100 XP por hora estudada). Vence a sequência que chegou ao maior nível.",
       f: F.lv,
       tn: "mais XP",
       fn: (p) =>
         p.R.map((r) => {
           const xp = (r.m / 60) * 100;
           return {
-            l: "Sequência " + bd(r.a) + " a " + bd(r.b),
+            l: "Sequência iniciada em " + bd(r.a),
             v: lvOf(xp),
             t: xp,
             x: Math.round(xp) + " XP",
@@ -1226,7 +1257,7 @@
       });
     });
     return {
-      v: 3,
+      v: 4,
       Y,
       to,
       at: Date.now(),
@@ -1244,7 +1275,7 @@
       fr = addK(C, -FRZ),
       gk = a.gen.join(",") + "|" + a.lang.join(",");
     if (t >= C) {
-      if (!a.res[Y] || a.res[Y].v !== 3) {
+      if (!a.res[Y] || a.res[Y].v !== 4) {
         a.res[Y] = build(Y, cut);
         save();
       }
@@ -1337,7 +1368,7 @@
   function card(c, lead) {
     const d = CBY[c.id],
       w = c.n[0];
-    return `<div class="aw-card${lead ? " lead" : ""}"><div class="aw-ct"><span>${d.e}</span>${esc(d.n)}</div><div class="aw-w">${lead ? "👑" : "🥇"} ${esc(w.l)}</div><div class="aw-v">${d.f(w.v)}${w.x ? " · " + esc(w.x) : ""}</div>${lead ? '<div class="aw-m">líder na parcial</div>' : `<div class="aw-m">${marg(d, c.n)}</div>${nom(d, c.n)}`}</div>`;
+    return `<div class="aw-card${lead ? " lead" : ""}"><div class="aw-ct"><span>${d.e}</span>${esc(d.n)}</div>${d.ds ? `<div class="aw-m">${esc(d.ds)}</div>` : ""}<div class="aw-w">${lead ? "👑" : "🥇"} ${esc(w.l)}</div><div class="aw-v">${d.f(w.v)}${w.x ? " · " + esc(w.x) : ""}</div>${lead ? '<div class="aw-m">líder na parcial</div>' : `<div class="aw-m">${marg(d, c.n)}</div>${nom(d, c.n)}`}</div>`;
   }
   function heroHtml(R, lead) {
     const h = R.hero;
@@ -1367,6 +1398,7 @@
       const d = CBY[c.id],
         w = c.n[0];
       h += `<div class="aw-ct big"><span>${d.e}</span>${esc(d.n)}</div>`;
+      if (d.ds) h += `<div class="aw-m">${esc(d.ds)}</div>`;
       h += awCer.open
         ? `<div class="aw-win"><div class="aw-sparks">✨ 🎉 ✨</div><div class="aw-wbig aw-shine">${esc(w.l)}</div><div class="aw-vbig">${d.f(w.v)}${w.x ? " · " + esc(w.x) : ""}</div><div class="aw-m">${marg(d, c.n)}</div>${rankAll(d, c.n)}</div>`
         : `${noms(d, c.n)}<div class="aw-env">✉️</div><button class="btn main" data-aw="open">Abrir envelope</button>`;
@@ -1433,7 +1465,47 @@
         return `<tr><td><button class="btn" data-aw="tab" data-v="${y}">${y}</button></td><td>${hh(s.m || 0)}</td><td>${s.d || 0}</td><td>${s.st || 0}</td><td>${R.hero ? R.hero.sc + "/100" : "—"}</td><td>${w("mat")}</td><td>${w("mes")}</td><td>${(R.rec || []).length}</td><td>${r.st === "final" ? "🏆" : r.st === "frozen" ? "🔒" : "⏳"}</td></tr>`;
       })
       .join("");
-    return `<div class="aw-sec"><h2>🏛️ Hall da fama</h2><div class="aw-sc"><table><thead><tr><th>Ano</th><th>Horas</th><th>Dias</th><th>Streak</th><th>Estudante do Ano</th><th>Matéria do Ano</th><th>Melhor mês</th><th>Recordes</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    return `<div class="aw-sec"><h2>🏛️ Hall da fama</h2><div class="aw-sc"><table><thead><tr><th>Ano</th><th>Horas</th><th>Dias</th><th>Streak</th><th>Estudante do Ano</th><th>Matéria do Ano</th><th>Melhor mês</th><th>Recordes</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>${hofCats(ys)}`;
+  }
+  /* maiores vencedores de cada categoria, somando só as cerimônias já encerradas */
+  function hofCats(ys) {
+    const fin = ys.map((y) => resFor(y)).filter((r) => r.st === "final");
+    if (!fin.length) return "";
+    const out = [];
+    Object.keys(G).forEach((g) => {
+      const part = [];
+      CATS.filter((c) => c.g === g).forEach((c) => {
+        const m = new Map();
+        fin.forEach((r) => {
+          const k = r.R.c.find((x) => x.id === c.id),
+            w = k && k.n[0];
+          if (w) m.set(w.l, (m.get(w.l) || 0) + 1);
+        });
+        if (!m.size) return;
+        const mx = Math.max(...m.values()),
+          T = [...m].filter(([, n]) => n === mx).map(([l]) => l);
+        let who, cnt;
+        if (mx === 1 && fin.length > 1) {
+          who =
+            '<span class="sub">sem repetição (um vencedor diferente por ano)</span>';
+          cnt = "—";
+        } else {
+          who =
+            "<b>" +
+            T.slice(0, 3).map(esc).join(", ") +
+            "</b>" +
+            (T.length > 3 ? " +" + (T.length - 3) : "");
+          cnt = mx + "×";
+        }
+        part.push(
+          `<tr><td>${c.e} ${esc(c.n)}</td><td>${who}</td><td>${cnt}</td></tr>`,
+        );
+      });
+      if (part.length)
+        out.push(`<tr><th colspan="3">${G[g]}</th></tr>` + part.join(""));
+    });
+    if (!out.length) return "";
+    return `<div class="aw-sec"><h2>🏆 Maiores vencedores de cada categoria</h2><p class="sub">Conta só cerimônias já encerradas (${fin.length} ${fin.length === 1 ? "ano" : "anos"}).</p><div class="aw-sc"><table><thead><tr><th>Categoria</th><th>Maior vencedor</th><th>Vitórias</th></tr></thead><tbody>${out.join("")}</tbody></table></div></div>`;
   }
   function draw() {
     if (curPage !== "awards") return;
