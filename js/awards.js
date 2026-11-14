@@ -84,6 +84,8 @@
     vt: (v) => pn(v, "vitória", "vitórias"),
     rk: (v) => LV[Math.round(v)] || "—",
     dh: (v) => "+" + hh(Math.round(v)),
+    pc: (v) => "+" + Math.round(v) + "%",
+    mo: (v) => pn(v, "mês", "meses"),
   };
   const sn = (id) =>
     (S.subjects.find((s) => s.id === id) || { name: "Matéria removida" }).name;
@@ -702,6 +704,65 @@
         ng(p)
           .filter((o) => !o.before)
           .map((o) => ({ l: o.nm, v: o.tot, t: o.n })),
+    },
+    {
+      id: "cre",
+      g: "m",
+      e: "📈",
+      n: "Matéria em ascensão (maior crescimento % sobre o ano anterior)",
+      ds: "Matéria que mais cresceu em horas, em %, sobre o ano anterior (precisa de pelo menos 10h no ano anterior).",
+      f: F.pc,
+      tn: "mais horas no ano",
+      fn: (p) =>
+        ng(p)
+          .filter((o) => o.prevTot >= 600 && o.tot > o.prevTot)
+          .map((o) => ({
+            l: o.nm,
+            v: (o.tot / o.prevTot - 1) * 100,
+            t: o.tot,
+            x: hh(o.prevTot) + " → " + hh(o.tot),
+          })),
+    },
+    {
+      id: "due",
+      g: "m",
+      e: "⚔️",
+      n: "Duelo do ano (matéria que mais liderou meses)",
+      ds: "Em cada mês, a matéria mais estudada leva o ponto. Vence quem liderou mais meses.",
+      f: F.mo,
+      tn: "mais horas no ano",
+      fn: (p) => {
+        const A = ng(p);
+        if (A.length < 2) return [];
+        const cnt = new Map();
+        let N = 0;
+        for (let i = 0; i < 12; i++) {
+          const pre = p.Y + "-" + String(i + 1).padStart(2, "0");
+          let best = null,
+            bm = 0;
+          A.forEach((o) => {
+            let m = 0;
+            Object.keys(o.days).forEach((k) => {
+              if (k.slice(0, 7) === pre) m += o.days[k];
+            });
+            if (m > bm) {
+              bm = m;
+              best = o;
+            }
+          });
+          if (best) {
+            N++;
+            cnt.set(best, (cnt.get(best) || 0) + 1);
+          }
+        }
+        const r = A.filter((o) => cnt.get(o)).map((o) => ({
+          l: o.nm,
+          v: cnt.get(o),
+          t: o.tot,
+          x: "liderou " + cnt.get(o) + " de " + N + " meses",
+        }));
+        return r.length >= 2 ? r : [];
+      },
     },
     {
       id: "qda",
@@ -1419,7 +1480,116 @@
   }
   /* itens da cerimônia: categorias → Estudante do Ano → maiores vencedores (só se houver) */
   const cerItems = (R) =>
-    R.c.concat([{ hero: 1 }], topWinners(R).length ? [{ top: 1 }] : []);
+    (R.stat ? [{ intro: 1 }] : []).concat(
+      R.c,
+      [{ hero: 1 }],
+      topWinners(R).length ? [{ top: 1 }] : [],
+      chalData(R).length ? [{ chal: 1 }] : [],
+    );
+
+  /* ---------- Resumo de abertura, gráficos e desafios (calculados na hora; nada novo é salvo) ---------- */
+  const MI = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+  const hr = (v) => Math.round(v / 60) + "h";
+  const barsHtml = (vals, labels, hi) => {
+    const mx = Math.max(1, ...vals);
+    return `<div style="display:flex;align-items:flex-end;gap:4px;height:130px;margin:10px 0 2px">${vals
+      .map((v, i) => {
+        const h = Math.max(2, Math.round((v / mx) * 82));
+        return `<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%" title="${esc(labels[i])}: ${hh(v)}"><span style="font-size:.62rem;opacity:.8;white-space:nowrap">${v > 0 ? hr(v) : ""}</span><div style="width:100%;height:${h}%;border-radius:6px 6px 0 0;background:${i === hi ? "var(--flame)" : "var(--track)"}"></div></div>`;
+      })
+      .join(
+        "",
+      )}</div><div style="display:flex;gap:4px">${labels.map((l, i) => `<span style="flex:1;text-align:center;font-size:.7rem;${i === hi ? "font-weight:800" : "opacity:.7"}">${esc(l)}</span>`).join("")}</div>`;
+  };
+  function monthsHtml(Y, to) {
+    const v = P(Y, to).mo.map((o) => o.m),
+      mx = Math.max(0, ...v);
+    if (mx <= 0) return "";
+    const hi = v.indexOf(mx);
+    return `<div class="aw-sec"><h2>📊 Horas por mês</h2>${barsHtml(v, MI, hi)}<div class="aw-m">Melhor mês: <b>${MN[hi]}</b> · ${hh(mx)}</div></div>`;
+  }
+  function hofChart(ys) {
+    if (ys.length < 2) return "";
+    const v = ys.map((y) => (resFor(y).R.stat || {}).m || 0),
+      mx = Math.max(0, ...v);
+    if (mx <= 0) return "";
+    const hi = v.indexOf(mx);
+    return `<div class="aw-sec"><h2>📊 Horas por ano</h2>${barsHtml(v, ys.map(String), hi)}<div class="aw-m">Melhor ano: <b>${ys[hi]}</b> · ${hh(mx)}</div></div>`;
+  }
+  function introHtml(R) {
+    const p = P(R.Y, R.to),
+      st = R.stat;
+    let bk = null,
+      bm = 0;
+    p.dk.forEach((k) => {
+      if (p.D[k] > bm) {
+        bm = p.D[k];
+        bk = k;
+      }
+    });
+    const sb = ng(p)
+      .slice()
+      .sort((a, b) => b.tot - a.tot)[0];
+    const cell = (e, t, v, s) =>
+      `<div class="aw-card"><div class="aw-ct"><span>${e}</span>${t}</div><div class="aw-w">${v}</div>${s ? `<div class="aw-m">${s}</div>` : ""}</div>`;
+    return (
+      `<div class="aw-grid">` +
+      cell("⏱️", "Horas no ano", hh(st.m), "") +
+      cell("📆", "Dias estudados", st.d + "", "") +
+      (bk
+        ? cell(
+            "🏃",
+            "Melhor dia",
+            hh(bm),
+            DIAS[(parse(bk).getDay() + 6) % 7] + " " + bd(bk),
+          )
+        : "") +
+      (sb ? cell("📚", "Matéria mais estudada", esc(sb.nm), hh(sb.tot)) : "") +
+      `</div>` +
+      cmpHtml(R) +
+      monthsHtml(R.Y, R.to)
+    );
+  }
+  /* desafios para o ano seguinte: metas por regra, a partir dos recordes até o ano da cerimônia */
+  function chalData(R) {
+    if (!R.stat) return [];
+    const ys = yrs().filter((y) => y <= R.Y),
+      st = ys.map((y) => (y === R.Y ? R.stat : P(y, toFor(y)).stat));
+    return RM.map(([k, n, f]) => ({
+      k,
+      n,
+      f,
+      rec: Math.max(0, ...st.map((s) => s[k] || 0)),
+      cur: R.stat[k] || 0,
+    })).filter((x) => x.rec > 0);
+  }
+  const chalGoal = (x) =>
+    ({
+      day: "Estudar mais de " + hh(x.rec) + " em um único dia",
+      wk: "Passar de " + hh(x.rec) + " em uma semana",
+      mon: "Passar de " + hh(x.rec) + " em um mês",
+      st: "Fazer uma sequência de " + (x.rec + 1) + " dias seguidos",
+      blk: "Fazer um bloco contínuo maior que " + hh(x.rec),
+      m:
+        "Passar de " +
+        hh(x.rec) +
+        " no ano (média de " +
+        hh(Math.ceil(x.rec / 365)) +
+        " por dia)",
+    })[x.k];
+  function chalTable(R) {
+    const L = chalData(R);
+    return `<div class="aw-sc"><table><thead><tr><th>Desafio</th><th>Recorde atual</th><th>${R.Y}</th></tr></thead><tbody>${L.map(
+      (x) =>
+        `<tr><td><b>${chalGoal(x)}</b><br><span class="sub">${x.n}</span></td><td>${F[x.f](x.rec)}</td><td>${F[x.f](x.cur)}${x.cur >= x.rec ? " 🔨" : ""}</td></tr>`,
+    ).join(
+      "",
+    )}</tbody></table></div><p class="sub">Metas calculadas a partir dos seus recordes. Passar do recorde atual é recorde histórico.</p>`;
+  }
+  const chalSec = (R) =>
+    chalData(R).length
+      ? `<div class="aw-sec"><h2>🎯 Desafios para ${R.Y + 1}</h2>${chalTable(R)}</div>`
+      : "";
 
   /* ---------- HTML ---------- */
   const marg = (d, n) =>
@@ -1472,7 +1642,11 @@
       c = it[i],
       last = i + 1 >= N;
     let h = `<div class="aw-stage"><div class="aw-prog">Cerimônia ${Y} · ${i + 1} de ${N}</div>`;
-    if (c.top) {
+    if (c.intro) {
+      h += `<div class="aw-ct big">🎬 Seu ano em 60 segundos</div><div class="aw-sec">${introHtml(R)}</div>`;
+    } else if (c.chal) {
+      h += `<div class="aw-ct big">🎯 Desafios para ${Y + 1}</div><div class="aw-sec">${chalTable(R)}</div>`;
+    } else if (c.top) {
       h += `<div class="aw-ct big">🏅 Maiores vencedores da noite</div><div class="aw-sec">${topCards(topWinners(R))}</div>`;
     } else if (c.hero) {
       h +=
@@ -1491,7 +1665,7 @@
         ? `<div class="aw-win"><div class="aw-sparks">✨ 🎉 ✨</div><div class="aw-wbig aw-shine">${esc(w.l)}</div>${bg ? `<div class="aw-m"><b>${bg}</b> <span style="opacity:.7">(P = vezes que ganhou · S = anos seguidos)</span></div>` : ""}${sy ? `<div class="aw-m">🎤 ${esc(sy)}</div>` : ""}<div class="aw-vbig">${d.f(w.v)}${w.x ? " · " + esc(w.x) : ""}</div><div class="aw-m">${marg(d, c.n)}</div>${rankAll(d, c.n)}</div>`
         : `${noms(d, c.n)}<div class="aw-env">✉️</div><button class="btn main" data-aw="open">Abrir envelope</button>`;
     }
-    if (awCer.open || c.top)
+    if (awCer.open || c.top || c.intro || c.chal)
       h += `<div class="aw-act"><button class="btn main" data-aw="next">${last ? "Ver resultado final" : "Próxima categoria →"}</button></div>`;
     return (
       h +
@@ -1525,12 +1699,13 @@
     if (!lead)
       h += `<p class="sub">Ao lado dos vencedores: P = vezes que ganhou a categoria · S = anos seguidos vencendo (só aparece a partir de 2).</p>`;
     h += heroHtml(R, lead);
+    h += monthsHtml(Y, to);
     Object.keys(G).forEach((g) => {
       const L = R.c.filter((c) => CBY[c.id].g === g);
       if (L.length)
         h += `<div class="aw-sec"><h2>${G[g]}</h2><div class="aw-grid">${L.map((c) => card(c, lead, Y)).join("")}</div></div>`;
     });
-    if (!lead) h += recHtml(R) + topHtml(R);
+    if (!lead) h += recHtml(R) + topHtml(R) + chalSec(R);
     return h + cfgHtml(Y, r);
   }
   function cfgHtml(Y, r) {
@@ -1555,7 +1730,7 @@
         return `<tr><td><button class="btn" data-aw="tab" data-v="${y}">${y}</button></td><td>${hh(s.m || 0)}</td><td>${s.d || 0}</td><td>${s.st || 0}</td><td>${R.hero ? R.hero.sc + "/100" : "—"}</td><td>${w("mat")}</td><td>${w("mes")}</td><td>${(R.rec || []).length}</td><td>${r.st === "final" ? "🏆" : r.st === "frozen" ? "🔒" : "⏳"}</td></tr>`;
       })
       .join("");
-    return `<div class="aw-sec"><h2>🏛️ Hall da fama</h2><div class="aw-sc"><table><thead><tr><th>Ano</th><th>Horas</th><th>Dias</th><th>Streak</th><th>Estudante do Ano</th><th>Matéria do Ano</th><th>Melhor mês</th><th>Recordes</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>${hofRank(ys)}${hofRecs(ys)}${hofCats(ys)}`;
+    return `<div class="aw-sec"><h2>🏛️ Hall da fama</h2><div class="aw-sc"><table><thead><tr><th>Ano</th><th>Horas</th><th>Dias</th><th>Streak</th><th>Estudante do Ano</th><th>Matéria do Ano</th><th>Melhor mês</th><th>Recordes</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>${hofChart(ys)}${hofRank(ys)}${hofRecs(ys)}${hofCats(ys)}`;
   }
   /* classificação geral: soma de todos os prêmios de todas as cerimônias encerradas (só dia da semana, mês e matéria) */
   function hofRank(ys) {
