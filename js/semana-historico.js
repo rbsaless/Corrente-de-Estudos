@@ -1,26 +1,36 @@
 /* ===== Visão semanal ===== */
-const HH=52,SNAP=15,TMIN=0,TMAX=1440;
+let HH=52,TOFF=0,TEND=1440,wkFull=false,wkHH=0,wkFit=false,wkRt=0;const SNAP=15,TMIN=0,TMAX=1440;
 const hmin=t=>{const [a,b]=(t||'0:0').split(':').map(Number);return a*60+b};
 const mhm=m=>p2(Math.floor(m/60))+':'+p2(m%60);
 const durOf=x=>Math.max(SNAP,+x.dur||+x.est||60);
 const allTasks=()=>{const r=[];S.subjects.forEach(s=>(s.topics||[]).forEach(x=>r.push({s,x})));return r};
 const findTask=(sid,tid)=>{const s=S.subjects.find(a=>a.id===sid),x=s&&(s.topics||[]).find(y=>y.id===tid);return x?{s,x}:null};
 function viewSeg(){return `<div class='seg' role='group' aria-label='Tipo de visão'><button class='${calV==='month'?'on':''}' data-a='cview' data-v='month'>Mensal</button><button class='${calV==='week'?'on':''}' data-a='cview' data-v='week'>Semanal</button></div>`}
-function layoutDay(L){
- const ev=L.map(o=>({o,a:hmin(o.x.time),b:Math.min(1440,hmin(o.x.time)+durOf(o.x))})).sort((p,q)=>p.a-q.a||q.b-p.b);
+function layoutBlocks(arr){
+ const MINV=Math.ceil(18/HH*60);
+ const ev=arr.map(z=>({z,a:z.a,vb:Math.max(z.b,z.a+MINV)})).sort((p,q)=>p.a-q.a||q.vb-p.vb);
  let cl=[],ce=0;const out=[];
- const flush=()=>{cl.forEach(e=>e.n=cl.reduce((m,z)=>Math.max(m,z.c+1),1));out.push(...cl);cl=[]};
+ const flush=()=>{const n=cl.reduce((m,z)=>Math.max(m,z.c+1),1);cl.forEach(e=>{e.z.c=e.c;e.z.n=n;out.push(e.z)});cl=[]};
  ev.forEach(e=>{if(cl.length&&e.a>=ce)flush();
-  const used=cl.filter(z=>z.b>e.a).map(z=>z.c);let c=0;while(used.includes(c))c++;e.c=c;cl.push(e);ce=Math.max(ce,e.b)});
+  const used=cl.filter(z=>z.vb>e.a).map(z=>z.c);let c=0;while(used.includes(c))c++;e.c=c;cl.push(e);ce=Math.max(ce,e.vb)});
  flush();return out}
+function layoutDay(L){return layoutBlocks(L.map(o=>({o,a:hmin(o.x.time),b:Math.min(1440,hmin(o.x.time)+durOf(o.x))})))}
 function renderWeek(){
  const el=$('#cal');if(!el)return;
  const t=fmt(now());if(!calSel)calSel=t;
  if(!calW)calW=fmt(monday(parse(calSel)));
  const mon=parse(calW),days=Array.from({length:7},(_,i)=>fmt(addD(mon,i)));
- const old=el.querySelector('.wk-sc');if(old)wkScroll=old.scrollTop;
  const by={};allTasks().forEach(o=>{if(o.x.date)(by[o.x.date]=by[o.x.date]||[]).push(o)});
  const W=wkInfo=wkStudy(days);
+ let ra=1440,rb=0;
+ days.forEach(k=>{(by[k]||[]).filter(o=>o.x.time).forEach(o=>{const s0=hmin(o.x.time);ra=Math.min(ra,s0);rb=Math.max(rb,Math.min(1440,s0+durOf(o.x)))});(W.ss[k]||[]).forEach(z=>{ra=Math.min(ra,z.a);rb=Math.max(rb,z.b)})});
+ if(wkFull){TOFF=0;TEND=1440}
+ else{if(ra>=rb){ra=8*60;rb=20*60}
+  let a0=Math.max(0,Math.floor(ra/60)*60-60),b0=Math.min(1440,Math.ceil(rb/60)*60+60);
+  if(b0-a0<600){b0=Math.min(1440,a0+600);a0=Math.max(0,b0-600)}
+  TOFF=a0;TEND=b0}
+ const span=TEND-TOFF;
+ HH=wkHH||Math.max(28,Math.min(64,Math.floor(560/(span/60))));
  const a=addD(mon,0),b=addD(mon,6);
  const title=a.getMonth()===b.getMonth()?`${a.getDate()} – ${b.getDate()} de ${MESES[b.getMonth()]} de ${b.getFullYear()}`:`${a.getDate()} de ${MESES[a.getMonth()].slice(0,3)} – ${b.getDate()} de ${MESES[b.getMonth()].slice(0,3)} de ${b.getFullYear()}`;
  const head=days.map((k,i)=>`<div class='wk-hd${k===t?' today':''}${k===calSel?' sel':''}' data-a='wsel' data-k='${k}'>${DIAS[i]}<br><b>${+k.slice(8)}</b></div>`).join('');
@@ -28,45 +38,51 @@ function renderWeek(){
   const tk=L.map(({s,x})=>`<span class='wk-chip${x.done?' dn':''}' data-sid='${s.id}' data-tid='${x.id}' style='--c:${s.color}' title='${esc(s.name)}: ${xn(x)}'>${x.done?'✓ ':''}${xn(x)}</span>`).join('');
   const sd=(W.un[k]||[]).map(u=>`<span class='wk-sd' data-a='wss' data-sid='${u.s.id}' data-k='${k}' data-i='u' style='--c:${u.s.color}' title='${esc(u.s.name)}: ${u.m?hh(u.m)+' estudadas (sem hora)':'estudo registrado (sem hora)'}'>⏱ ${u.m?hh(u.m)+' · ':''}${esc(u.s.name)}</span>`).join('');
   return `<div class='wk-ad' data-day='${k}'>${tk}${sd}</div>`}).join('');
- const axis=Array.from({length:24},(_,h)=>h?`<span style='top:${h*HH}px'>${p2(h)}:00</span>`:'').join('');
- const cols=days.map(k=>{const L=(by[k]||[]).filter(o=>o.x.time),SL=W.ss[k]||[],pw=100;
-  const evs=layoutDay(L).map(({o,a,b,c,n})=>{const {s,x}=o,top=a/60*HH,hgt=Math.max((b-a)/60*HH,16),w=100/n*pw/100;
-   return `<div class='wk-ev${x.done?' dn':''}' data-sid='${s.id}' data-tid='${x.id}' style='--c:${s.color};top:${top}px;height:${hgt-1}px;left:calc(${c*w}% + 1px);width:calc(${w}% - 3px)' title='${esc(s.name)}: ${xn(x)}${x.done?' (concluída)':''}'><button class='wk-chk' data-a='ctog' data-id='${s.id}' data-tid='${x.id}' aria-label='${x.done?'Reabrir tarefa':'Concluir tarefa'}'>${x.done?'✓':''}</button><div class='wk-t'>${xn(x)}</div>${hgt>=34?`<small>${mhm(a)}–${mhm(Math.min(b,1440))} · ${esc(s.name)}</small>`:''}<div class='wk-rs' aria-hidden='true'></div></div>`}).join('');
-  const ssh=SL.map((z,i)=>{const top=z.a/60*HH,hgt=Math.max((z.b-z.a)/60*HH,16);
-   return `<div class='wk-ss' data-a='wss' data-sid='${z.s.id}' data-k='${k}' data-i='${i}' style='--c:${z.s.color};top:${top}px;height:${hgt-1}px;left:1px;right:1px' title='⏱ ${esc(z.s.name)} · ${mhm(z.a)}–${mhm(Math.min(z.b,1440))}'><b>${esc(z.s.name)}</b>${hgt>=34?`<small>${mhm(z.a)}–${mhm(Math.min(z.b,1440))}</small>`:''}</div>`}).join('');
+const axis=Array.from({length:Math.round(span/60)},(_,i)=>i?`<span style='top:${i*HH}px'>${p2(TOFF/60+i)}:00</span>`:'').join('');
+ const cols=days.map(k=>{const L=(by[k]||[]).filter(o=>o.x.time),SL=W.ss[k]||[];
+  const MV=Math.ceil(18/HH*60),ovl=L.some(o=>{const a1=hmin(o.x.time),b1=a1+Math.max(durOf(o.x),MV);return SL.some(z=>z.a<b1&&a1<Math.max(z.b,z.a+MV))});
+  const ln=ovl?{pl:[0,56],rl:[56,44]}:{pl:[0,100],rl:[0,100]};
+  const evs=layoutDay(L).map(({o,a,b,c,n})=>{const {s,x}=o,top=(a-TOFF)/60*HH,hgt=Math.max((b-a)/60*HH,16),w=ln.pl[1]/n;
+   return `<div class='wk-ev${x.done?' dn':''}' data-sid='${s.id}' data-tid='${x.id}' style='--c:${s.color};top:${top}px;height:${hgt-1}px;left:calc(${ln.pl[0]+c*w}% + 1px);width:calc(${w}% - 3px)' title='${esc(s.name)}: ${xn(x)}${x.done?' (concluída)':''} · ${mhm(a)}–${mhm(Math.min(b,1440))}'><button class='wk-chk' data-a='ctog' data-id='${s.id}' data-tid='${x.id}' aria-label='${x.done?'Reabrir tarefa':'Concluir tarefa'}'>${x.done?'✓':''}</button><div class='wk-t'>${xn(x)}</div>${hgt>=34&&n<3?`<small>${mhm(a)}–${mhm(Math.min(b,1440))} · ${esc(s.name)}</small>`:''}<div class='wk-rs' aria-hidden='true'></div></div>`}).join('');
+  const ssh=layoutBlocks(SL.map((z,i)=>({z,i,a:z.a,b:Math.min(z.b,1440)}))).map(({z,i,a,b,c,n})=>{const top=(a-TOFF)/60*HH,hgt=Math.max((b-a)/60*HH,16),w=ln.rl[1]/n;
+   return `<div class='wk-ss' data-a='wss' data-sid='${z.s.id}' data-k='${k}' data-i='${i}' style='--c:${z.s.color};top:${top}px;height:${hgt-1}px;left:calc(${ln.rl[0]+c*w}% + 1px);width:calc(${w}% - 3px)' title='⏱ ${esc(z.s.name)} · ${mhm(a)}–${mhm(Math.min(b,1440))}'><b>${esc(z.s.name)}</b>${hgt>=34&&n<3?`<small>${mhm(a)}–${mhm(Math.min(b,1440))}</small>`:''}</div>`}).join('');
   const nowLine=k===t?`<div class='wk-now' id='wkNow'></div>`:'';
-  return `<div class='wk-col${k===t?' today':''}' data-a='wslot' data-day='${k}' style='--hh:${HH}px;height:${24*HH}px'>${evs}${ssh}${nowLine}</div>`}).join('');
+  return `<div class='wk-col${k===t?' today':''}' data-a='wslot' data-day='${k}' style='--hh:${HH}px;height:${span/60*HH}px'>${evs}${ssh}${nowLine}</div>`}).join('');
  const un=allTasks().filter(o=>!o.x.done&&!o.x.date);
  const tray=un.length?`<div class='wk-tray'><h4>📥 Tarefas sem data · arraste para a agenda</h4><div class='wk-tl'>${un.map(({s,x})=>`<span class='wk-tc' data-sid='${s.id}' data-tid='${x.id}' style='--c:${s.color}' title='${esc(s.name)}'>${xn(x)}</span>`).join('')}</div></div>`:'';
- el.innerHTML=`<div class='ch'><h2 style='text-transform:none'>${title}</h2><div class='vt'>${viewSeg()}<span style='display:flex;gap:6px'><button class='btn' data-a='wnav' data-v='-1' aria-label='Semana anterior'>‹</button><button class='btn' data-a='wnav' data-v='0'>Hoje</button><button class='btn' data-a='wnav' data-v='1' aria-label='Próxima semana'>›</button></span></div></div>
+ el.innerHTML=`<div class='ch'><h2 style='text-transform:none'>${title}</h2><div class='vt'>${viewSeg()}<button class='btn' data-a='wfull' title='Alternar entre o dia compacto e as 24 horas'>${wkFull?'Compactar':'24h'}</button><span style='display:flex;gap:6px'><button class='btn' data-a='wnav' data-v='-1' aria-label='Semana anterior'>‹</button><button class='btn' data-a='wnav' data-v='0'>Hoje</button><button class='btn' data-a='wnav' data-v='1' aria-label='Próxima semana'>›</button></span></div></div>
  <div class='wk-box'><div class='wk-x'><div class='wk-in'>
   <div class='wk-head'><div></div>${head}</div>
   <div class='wk-adr'><div class='wk-adl'>sem hora</div>${adr}</div>
-  <div class='wk-sc' id='wkSc'><div class='wk-body'><div class='wk-ax' style='height:${24*HH}px'>${axis}</div>${cols}</div></div>
+  <div class='wk-sc' id='wkSc' style='max-height:none;overflow-y:visible'><div class='wk-body'><div class='wk-ax' style='height:${span/60*HH}px'>${axis}</div>${cols}</div></div>
  </div></div></div>
  <div class='wk-lg'><span><i></i>planejado (tarefas, concluídas ficam riscadas)</span><span><i class='r'></i>realizado (cronômetro e registros)</span></div>
- <p class='sub' style='margin:8px 0 0;font-size:.85rem'>Clique num horário vazio para criar uma tarefa · arraste para mover · puxe a borda de baixo para mudar a duração · clique na tarefa para editar · clique num bloco preenchido para ver o que estudou.</p>${tray}<div class='wk-day'>${dayTop()}${dayStudy()}</div>`;
- const sc=$('#wkSc');
- if(sc){sc.scrollTop=wkScroll!=null?wkScroll:Math.max(0,(new Date().getHours()-1)*HH);wkScroll=sc.scrollTop}
+ <p class='sub' style='margin:8px 0 0;font-size:.85rem'>Clique num horário vazio para criar uma tarefa · arraste para mover · puxe a borda de baixo para mudar a duração · clique na tarefa para editar · clique num bloco preenchido para ver o que estudou · o botão 24h mostra o dia inteiro.</p>${tray}<div class='wk-day'>${dayTop()}${dayStudy()}</div>`;
+ if(!wkFit){const sc=$('#wkSc');
+  if(sc){const ovh=sc.getBoundingClientRect().top-el.getBoundingClientRect().top,avail=window.innerHeight-ovh-60,h=Math.max(28,Math.min(64,Math.floor(avail/(span/60))));
+   if(Math.abs(h-HH)>1){wkHH=h;wkFit=true;try{renderWeek()}finally{wkFit=false}return}}}
  updNow();
 }
-function updNow(){const n=$('#wkNow');if(!n)return;const d=new Date();n.style.top=((d.getHours()*60+d.getMinutes())/60*HH)+'px'}
+window.addEventListener('resize',()=>{if(calV==='week'&&$('#wkSc')){clearTimeout(wkRt);wkRt=setTimeout(()=>{wkHH=0;renderWeek()},200)}});
+function updNow(){const n=$('#wkNow');if(!n)return;const d=new Date(),m=d.getHours()*60+d.getMinutes();n.style.display=(m<TOFF||m>TEND)?'none':'';n.style.top=((m-TOFF)/60*HH)+'px'}
 setInterval(updNow,60000);
 
+document.head.insertAdjacentHTML('beforeend',"<style id='mc-css'>.cc i.mc{cursor:grab;touch-action:pan-y;user-select:none;-webkit-user-select:none}.cc i.mc.src{opacity:.3}.cd.drop{border-color:var(--flame);background:color-mix(in srgb,var(--flame) 18%,var(--bg))}body.dragging .cd{cursor:grabbing}</style>");
 /* arrastar / redimensionar */
 let DR=null;
 function setPv(pv,top,hgt,txt){pv.style.top=top+'px';pv.style.left='1px';pv.style.right='1px';pv.style.height=hgt+'px';pv.textContent=txt;pv.hidden=false}
 const snap=m=>Math.round(m/SNAP)*SNAP;
 function colAt(x,y){
+ if(calV==='month'){for(const c of document.querySelectorAll('.cd[data-k]')){const r=c.getBoundingClientRect();if(x>=r.left&&x<r.right&&y>=r.top&&y<=r.bottom)return{el:c,day:c.dataset.k,allday:true,month:true}}return null}
  const ad=[...document.querySelectorAll('.wk-ad')],cs=[...document.querySelectorAll('.wk-col')];
  for(const c of ad){const r=c.getBoundingClientRect();if(x>=r.left&&x<r.right&&y>=r.top&&y<=r.bottom)return{el:c,day:c.dataset.day,allday:true}}
  for(const c of cs){const r=c.getBoundingClientRect(),sc=$('#wkSc').getBoundingClientRect();
   if(x>=r.left&&x<r.right&&y>=sc.top&&y<=sc.bottom)return{el:c,day:c.dataset.day,allday:false,top:r.top}}
  return null}
 function dragStart(e){
- if(calV!=='week'||e.button>0)return;
+ if((calV!=='week'&&calV!=='month')||e.button>0)return;
  if(e.target.closest('.wk-chk'))return;
- const src=e.target.closest('.wk-ev,.wk-chip,.wk-tc');if(!src)return;
+ const src=e.target.closest('.wk-ev,.wk-chip,.wk-tc,.mc');if(!src)return;
  const o=findTask(src.dataset.sid,src.dataset.tid);if(!o)return;
  const rs=!!e.target.closest('.wk-rs'),r=src.getBoundingClientRect();
  DR={src,o,rs,pid:e.pointerId,sx:e.clientX,sy:e.clientY,go:e.clientY-r.top,w:r.width,h:r.height,active:false,touch:e.pointerType==='touch',tgt:null,ok:false,cx:e.clientX,cy:e.clientY};
@@ -105,14 +121,15 @@ function dragUpdate(){
  if(!t)return;
  if(d.rs){
   if(t.allday||t.day!==d.o.x.date)return;
-  const start=hmin(d.o.x.time),m=snap((d.cy-t.top)/HH*60);let end=Math.min(1440,Math.max(start+SNAP,m));
+  const start=hmin(d.o.x.time),m=snap((d.cy-t.top)/HH*60+TOFF);let end=Math.min(TEND,Math.max(start+SNAP,m));
   d.tgt={dur:end-start};d.ok=true;
-  setPv(d.pv,start/60*HH,(end-start)/60*HH-1,`${mhm(start)}–${mhm(end)} · ${hh(end-start)}`);t.el.appendChild(d.pv);return}
- if(t.allday){t.el.classList.add('drop');d.tgt={day:t.day,time:''};d.ok=true;return}
- const dur=durOf(d.o.x);let st=snap((d.cy-d.go-t.top)/HH*60);st=Math.max(0,Math.min(1440-SNAP,st));
- if(st+dur>1440&&dur<=1440)st=Math.max(0,1440-dur);
+  setPv(d.pv,(start-TOFF)/60*HH,(end-start)/60*HH-1,`${mhm(start)}–${mhm(end)} · ${hh(end-start)}`);t.el.appendChild(d.pv);return}
+ if(t.month&&t.day===d.o.x.date)return;
+ if(t.allday){t.el.classList.add('drop');d.tgt={day:t.day,time:t.month?(d.o.x.time||''):''};d.ok=true;return}
+ const dur=durOf(d.o.x);let st=snap((d.cy-d.go-t.top)/HH*60+TOFF);st=Math.max(TOFF,Math.min(TEND-SNAP,st));
+ if(st+dur>TEND&&dur<=TEND-TOFF)st=Math.max(TOFF,TEND-dur);
  d.tgt={day:t.day,time:mhm(st)};d.ok=true;
- setPv(d.pv,st/60*HH,Math.max(dur/60*HH-1,16),`${mhm(st)}–${mhm(Math.min(1440,st+dur))}`);t.el.appendChild(d.pv);
+ setPv(d.pv,(st-TOFF)/60*HH,Math.max(dur/60*HH-1,16),`${mhm(st)}–${mhm(Math.min(1440,st+dur))}`);t.el.appendChild(d.pv);
 }
 function dragEnd(e){
  const d=DR;if(!d||(e&&e.pointerId!==d.pid))return;
@@ -199,6 +216,7 @@ document.addEventListener('click',e=>{
   if(v===0){calW=fmt(monday(now()));calSel=fmt(now());wkScroll=null}
   else{calW=fmt(addD(parse(calW),7*v));const k=fmt(addD(parse(calSel),7*v));calSel=k}
   renderCal()}
+ else if(a==='wfull'){wkFull=!wkFull;wkHH=0;renderCal()}
  else if(a==='wsel'){calSel=b.dataset.k;renderCal()}
  else if(a==='dnav'){const v=+b.dataset.v;calSel=v===0?fmt(now()):fmt(addD(parse(calSel||fmt(now())),v));calM=calSel.slice(0,7);calW=fmt(monday(parse(calSel)));renderCal()}
  else if(a==='wss'){studyDetail(b.dataset.sid,b.dataset.k,b.dataset.i)}
@@ -206,7 +224,7 @@ document.addEventListener('click',e=>{
  else if(a==='wslot'){
   if(e.target.closest('.wk-ev,.wk-chip,.wk-pv'))return;
   if(Date.now()-(dragEnd.skipClick||0)<60)return;
-  const r=b.getBoundingClientRect(),m=Math.max(0,Math.min(1440-30,Math.floor((e.clientY-r.top)/HH*60/30)*30));
+  const r=b.getBoundingClientRect(),m=Math.max(TOFF,Math.min(TEND-30,Math.floor(((e.clientY-r.top)/HH*60+TOFF)/30)*30));
   calSel=b.dataset.day;openTask('',null,b.dataset.day,mhm(m))}
 });
 
