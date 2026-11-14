@@ -123,28 +123,31 @@ const NOMES=['Curioso','Aprendiz','Noviço','Escudeiro','Recruta','Explorador','
 const XB_RATE=.25;
 const xbCalc=m=>Math.round(Math.max(0,+m||0)*100/60*XB_RATE*100)/100;
 function xbSum(from,to){const ids=new Set(S.subjects.map(s=>s.id));let b=0;(S.log||[]).forEach(x=>{if(x.xb>0&&ids.has(x.sid)&&x.d>=from&&x.d<=to){const sb=S.subjects.find(y=>y.id===x.sid);if(sb&&impAt(sb,x.d)!==0)b+=x.xb}});return b}
-/* XP: 100 por hora estudada. Custo do nível n para n+1 cresce 25% do custo base a cada nível. */
-const XPC=n=>Math.round(100*(1+(n-1)*.25));
-/* XP da sequência: conta só o tempo desde a última pausa de 2 dias seguidos sem estudar.
-   Estudou no dia D, faltou D+1 e D+2 => zera ao virar para D+3. No dia D+2 o XP está em risco. */
+/* XP: 100 por hora estudada. Custo do nível n para n+1: até o nível-base (nível que o usuário tinha ao ativar, S.xpBase.n) vale o custo antigo
+   (100 × (1+0,25×(n−1))); do nível-base em diante vale ~26 h por nível (2600 XP +4 por nível), para subir ~1 nível/semana a 3h30–4h/dia. */
+const XPC_OLD=n=>Math.round(100*(1+(n-1)*.25)),XPC_NEW=n=>2600+4*(n-1);
+function xpBaseInit(){S.xpBase={n:0};const n=lvInfo(xpRun().xp).n;S.xpBase={n};save();return S.xpBase}
+const XPC=n=>{const v=S.xpBase||xpBaseInit();return v.n&&n>=v.n?XPC_NEW(n):XPC_OLD(n)};
+/* XP acumulado a partir de um ponto de partida fixo (S.xpStart = início da sequência que existia ao ativar esta regra).
+   Não zera mais por pausa: só sobe estudando e só cai por ociosidade/punições; ao zerar o XP do nível, cai para o nível anterior. */
 function xpRun(){
  const t=fmt(now()),days=new Set();S.subjects.forEach(s=>Object.keys(s.days).forEach(k=>{if(k<=t&&plOf(s,k)>0)days.add(k)}));chCfg().off.forEach(k=>{if(k<=t)days.add(k)});
  const ks=[...days].sort();if(!ks.length)return{xp:0,xb:0,lo:0,last:null,gap:null};
- const last=ks[ks.length-1],gap=diff(last,t);if(gap>=3)return{xp:0,xb:0,lo:0,last,gap};
- let i=ks.length-1;while(i>0&&diff(ks[i-1],ks[i])<=2)i--;
- const start=ks[i];let min=0;S.subjects.forEach(s=>Object.keys(s.days).forEach(k=>{if(k>=start&&k<=t)min+=plOf(s,k)}));
+ const last=ks[ks.length-1],gap=diff(last,t);
+ if(!S.xpStart){if(gap>=3)S.xpStart=t;else{let i=ks.length-1;while(i>0&&diff(ks[i-1],ks[i])<=2)i--;S.xpStart=ks[i]}save()}
+ const start=S.xpStart;let min=0;S.subjects.forEach(s=>Object.keys(s.days).forEach(k=>{if(k>=start&&k<=t)min+=plOf(s,k)}));
  const xb=xbSum(start,t),pos=chAdj(start,t,1),neg=chAdj(start,t,-1);return{xp:Math.max(0,Math.floor(min*100/60+xb+pos+neg)),xb:Math.floor(xb+pos),lo:Math.floor(-neg),last,gap}}
 function lvInfo(xp){let n=1,r=xp;while(n<100&&r>=XPC(n)){r-=XPC(n);n++}return{n,r,need:n<100?XPC(n):0}}
 function renderLvl(){
  const el=$('#lvl');if(!el)return;
- const R=xpRun(),xp=R.xp,L=lvInfo(xp),ato=ATOS[Math.floor((L.n-1)/10)],pct=L.need?Math.floor(L.r/L.need*100):100,risk=R.gap===2&&xp>0;
+ const R=xpRun(),xp=R.xp,L=lvInfo(xp),ato=ATOS[Math.floor((L.n-1)/10)],pct=L.need?Math.floor(L.r/L.need*100):100,risk=false;
  el.title=ato[1];el.classList.toggle('risk',risk);
  el.innerHTML=`<div class="lvb" aria-hidden="true">Nível<b>${L.n}</b></div><div class="lvm"><div class="lvn">Nível ${L.n}/${NOMES.length} · ${esc(NOMES[L.n-1])}</div><div class="lva">${ato[0]}</div>
  <div class="bar" role="progressbar" aria-label="Progresso do nível" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><div style="width:${pct}%"></div></div>
  <div class="lvx">${L.need?`${L.r} / ${L.need} XP · faltam ${L.need-L.r} para ${esc(NOMES[L.n])}`:'Nível máximo alcançado'} · ${xp} XP na sequência${R.xb>0?` · inclui +${R.xb} de bônus ⚡`:''}${R.lo>0?` · −${R.lo} por punição`:''}</div>
- ${risk?`<div class="lvr" role="alert">⚠️ Seu XP está em risco! Estude hoje ou ele zera à meia-noite.</div>`:xp===0?`<div class="lvx">Estude hoje para começar a ganhar XP. Ele zera após 2 dias sem estudar.</div>`:''}</div>`;
+ ${risk?`<div class="lvr" role="alert">⚠️ Seu XP está em risco! Estude hoje ou ele zera à meia-noite.</div>`:xp===0?`<div class="lvx">Estude hoje para começar a ganhar XP. Ele só cai com ociosidade (lazer zerado) e punições.</div>`:''}</div>`;
  if(S.xpv!==2){S.xpv=2;S.lvSeen=L.n;save()}
- else if(L.n!==S.lvSeen){const up=L.n>S.lvSeen;S.lvSeen=L.n;save();toast(up?`⬆️ Nível ${L.n}: ${NOMES[L.n-1]}!`:(xp===0?'💥 XP zerado: 2 dias sem estudar. Recomece sua jornada!':'📉 Você perdeu XP e caiu para o nível '+L.n+'.'))}
+ else if(L.n!==S.lvSeen){const up=L.n>S.lvSeen;S.lvSeen=L.n;save();toast(up?`⬆️ Nível ${L.n}: ${NOMES[L.n-1]}!`:(xp===0?'📉 Seu XP zerou. Estude para recomeçar!':'📉 Você perdeu XP e caiu para o nível '+L.n+'.'))}
 }
 
 /* ----- Dificuldade, prioridade e peso ----- */
