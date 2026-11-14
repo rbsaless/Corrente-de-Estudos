@@ -1518,7 +1518,7 @@
   }
   /* ---------- 🎬 Seu ano em 60 segundos (estilo "Wrapped": slides animados, avançam sozinhos; toque nas laterais para navegar) ---------- */
   const WR = { t: 0, i: 0 },
-    WR_DUR = 5200;
+    WR_DUR = 4800;
   function wrCss() {
     if (document.getElementById("aw-wr-css")) return;
     const s = document.createElement("style");
@@ -1556,6 +1556,12 @@
 #aw-wr .wr-pg i.cur:after{content:"";position:absolute;left:0;top:0;bottom:0;background:#fff;animation:wr-fill ${WR_DUR}ms linear forwards}
 #aw-wr .wr-t{position:absolute;top:28px;bottom:0;z-index:3;cursor:pointer}#aw-wr .wr-t.l{left:0;width:34%}#aw-wr .wr-t.r{right:0;width:66%}
 #aw-wr .wr-btn{margin-top:12px;padding:10px 20px;border-radius:999px;border:0;background:#fff;color:#1b1030;font-weight:800;cursor:pointer;position:relative;z-index:5}
+#aw-wr .wr-bars.t24{gap:2px}#aw-wr .wr-lb.t24{gap:2px;font-size:.58rem}
+#aw-wr .wr-rk{width:100%;position:relative;text-align:left;font-weight:700;font-size:.98rem;padding:9px 12px 11px;border-radius:12px;background:rgba(0,0,0,.24);overflow:hidden;display:flex;justify-content:space-between;gap:8px}
+#aw-wr .wr-rk i{position:absolute;left:0;bottom:0;height:4px;width:var(--w);background:#fff;transform-origin:left;transform:scaleX(0)}
+#aw-wr .on .wr-rk i{animation:wr-growx .9s calc(.7s + var(--n)*.3s) both}
+#aw-wr .wr-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px}
+@keyframes wr-growx{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes wr-bg{from{background-position:0 0}to{background-position:0 100%}}
 @keyframes wr-drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-26px,30px) scale(1.15)}}
 @keyframes wr-up{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
@@ -1632,13 +1638,18 @@
       st = R.stat,
       sl = [],
       add = (bg, inner) =>
-        sl.push(
-          `<div class="wr-s" style="background-image:${bg}">${inner}</div>`,
-        );
+        sl.push(`<div class="wr-s" style="background-image:${bg}">${inner}</div>`);
     const hrs = Math.round(st.m / 60),
       tot = Math.max(1, diff(p.from, R.to) + 1),
       cnt = (v, extra) =>
-        `<span data-cu="${v}"${extra || ""}>${v.toLocaleString("pt-BR")}</span>`;
+        `<span data-cu="${v}"${extra || ""}>${v.toLocaleString("pt-BR")}</span>`,
+      row = (txt, k) =>
+        `<div class="wr-row wu" style="animation-delay:${(0.5 + k * 0.4).toFixed(2)}s">${txt}</div>`,
+      pl_ = (n, a, b) => n + " " + (n === 1 ? a : b),
+      barsW = (v, hi, labs, cls) => {
+        const mx = Math.max(1, ...v);
+        return `<div class="wr-bars ${cls || ""}">${v.map((x, k) => `<i${k === hi ? ' class="hi"' : ""} style="--h:${Math.max(3, Math.round((x / mx) * 100))}%;--n:${k}"></i>`).join("")}</div><div class="wr-lb ${cls || ""}">${labs.map((l) => `<span>${l}</span>`).join("")}</div>`;
+      };
     let bk = null,
       bm = 0;
     p.dk.forEach((k) => {
@@ -1647,13 +1658,43 @@
         bk = k;
       }
     });
-    const SBs = ng(p)
+    const SBA = ng(p)
         .slice()
-        .sort((a, b) => b.tot - a.tot)
-        .slice(0, 3),
+        .sort((a, b) => b.tot - a.tot),
+      SBs = SBA.slice(0, 3),
       mv = p.mo.map((o) => o.m),
       mmx = Math.max(0, ...mv),
       hi = mv.indexOf(mmx);
+    /* horário, dia da semana e perfil */
+    const H = p.H,
+      sumH = H.reduce((a, x) => a + x, 0),
+      per = [
+        ["🦉 Coruja da madrugada", 0, 5, "Seu foco acorda quando o mundo dorme.", "da madrugada (0h às 5h)"],
+        ["🌅 Estudante matinal", 5, 12, "Você aproveita as primeiras horas do dia.", "da manhã (5h às 12h)"],
+        ["☀️ Estudante da tarde", 12, 18, "A tarde é o seu território.", "da tarde (12h às 18h)"],
+        ["🌙 Guardião da noite", 18, 24, "É quando o silêncio ajuda o seu foco.", "da noite (18h às 24h)"],
+      ].map(([n, a, b, d, w]) => ({
+        n,
+        d,
+        w,
+        v: H.slice(a, b).reduce((s, x) => s + x, 0),
+      })),
+      dom = sumH > 0 ? per.slice().sort((a, b) => b.v - a.v)[0] : null,
+      pk = H.indexOf(Math.max(...H)),
+      wv = p.wd.map((w) => (w.n ? w.m / w.n : 0)),
+      wmx = Math.max(0, ...wv),
+      wi = wv.indexOf(wmx),
+      cons = st.d / tot,
+      avgD = st.d ? st.m / st.d : 0,
+      trait =
+        cons >= 0.75
+          ? ["🎯 Constante", "estudou em " + Math.round(cons * 100) + "% dos dias do ano"]
+          : avgD > 0 && bm >= 3 * avgD
+            ? ["🏃 Maratonista", "chegou a estudar " + hh(Math.round(bm)) + " em um único dia"]
+            : SBA.length >= 5
+              ? ["🧭 Explorador", "passeou por " + SBA.length + " matérias"]
+              : null,
+      persona = dom ? dom.n : trait ? trait[0] : "📚 Estudante dedicado";
     const sp = [
       [8, 0, "✨"],
       [24, 1.1, "🎧"],
@@ -1667,45 +1708,127 @@
           `<span class="wsp" style="left:${l}%;animation-delay:${d}s">${e}</span>`,
       )
       .join("");
+    /* 1 abertura */
     add(
       "linear-gradient(160deg,#1ed760 0%,#0b8a45 45%,#06170e 100%)",
       `${sp}<div class="wr-k wu wd1">Seu ${Y}</div><div class="wr-b wp wd2">em estudos</div><div class="wr-sm wu wd4">Vamos ver como foi o seu ano?</div>`,
     );
+    /* 2 horas */
     add(
       "linear-gradient(160deg,#ff4ecd 0%,#7b2ff7 55%,#1b0b3a 100%)",
       `<div class="wr-sm wu wd1">Você estudou</div><div class="wr-num wp wd2">${cnt(hrs)}<small>h</small></div><div class="wr-sm wu wd4">É o mesmo que ${(hrs / 24).toFixed(1).replace(".", ",")} dias inteiros, 24 horas por dia.</div>`,
     );
+    /* 3 dias */
     add(
       "linear-gradient(160deg,#ffb100 0%,#ff5e2b 55%,#3a0f0b 100%)",
       `<div class="wr-sm wu wd1">Foram</div><div class="wr-num wp wd2">${cnt(st.d)}<small>dias</small></div><div class="wr-sm wu wd4">de estudo, ${Math.round((st.d / tot) * 100)}% do ano. A constância é o seu superpoder.</div>`,
     );
+    /* 4 sequência */
     if (st.st > 0)
       add(
         "linear-gradient(160deg,#ff3b3b 0%,#c2185b 55%,#2a0a1a 100%)",
         `<div class="wr-em wp wd1">🔥</div><div class="wr-sm wu wd2">Sua maior sequência</div><div class="wr-num wp wd3">${cnt(st.st)}<small>dias</small></div><div class="wr-sm wu wd5">seguidos, sem deixar a chama apagar.</div>`,
       );
+    /* 5 dia mais insano */
     if (bk)
       add(
         "linear-gradient(160deg,#2d7dff 0%,#5b2bd8 55%,#0b0a2e 100%)",
         `<div class="wr-k wu wd1">Seu dia mais insano</div><div class="wr-b wp wd2">${DIAS[(parse(bk).getDay() + 6) % 7]}, ${bd(bk)}</div><div class="wr-num wp wd4"><span data-cu="${Math.round(bm)}" data-fm="hm">${hh(Math.round(bm))}</span></div><div class="wr-sm wu wd5">de estudo em um único dia.</div>`,
       );
+    /* 6 matéria do ano */
     if (SBs.length)
       add(
         "linear-gradient(160deg,#00d4b4 0%,#0a7d8c 55%,#04141f 100%)",
-        `<div class="wr-k wu wd1">Sua matéria do ano</div><div class="wr-b wp wd2">${esc(SBs[0].nm)}</div><div class="wr-sm wu wd3">${hh(SBs[0].tot)} de dedicação</div>${SBs.slice(
-          1,
-        )
+        `<div class="wr-k wu wd1">Sua matéria do ano</div><div class="wr-b wp wd2">${esc(SBs[0].nm)}</div><div class="wr-sm wu wd3">${hh(SBs[0].tot)} de dedicação</div>${SBs.slice(1)
           .map(
             (o, k) =>
               `<div class="wr-row wu wd${4 + k}">${k + 2}º ${esc(o.nm)} · ${hh(o.tot)}</div>`,
           )
           .join("")}`,
       );
+    /* 7 top 5 */
+    if (SBA.length >= 2)
+      add(
+        "linear-gradient(160deg,#ff8a00 0%,#e52e71 55%,#2a0a24 100%)",
+        `<div class="wr-k wu wd1">Seu top ${Math.min(5, SBA.length)} do ano</div>${SBA.slice(0, 5)
+          .map(
+            (o, k) =>
+              `<div class="wr-rk wu" style="animation-delay:${(0.45 + k * 0.3).toFixed(2)}s"><span>${k + 1}º ${esc(o.nm)}</span><b>${hh(o.tot)}</b><i style="--w:${Math.max(4, Math.round((o.tot / SBA[0].tot) * 100))}%;--n:${k}"></i></div>`,
+          )
+          .join("")}`,
+      );
+    /* 8 matéria nova do ano */
+    const nv = SBA.filter((o) => !o.before);
+    if (nv.length)
+      add(
+        "linear-gradient(160deg,#a8e063 0%,#2e8b57 55%,#06180f 100%)",
+        `<div class="wr-em wp wd1">🌱</div><div class="wr-k wu wd2">Nova na sua vida</div><div class="wr-b wp wd3">${esc(nv[0].nm)}</div><div class="wr-sm wu wd4">Você começou em ${Y} e já somou ${hh(nv[0].tot)}.</div>${nv.length > 1 ? `<div class="wr-sm wu wd5">E mais ${pl_(nv.length - 1, "matéria nova", "matérias novas")}.</div>` : ""}`,
+      );
+    /* 9 mês mais forte */
     if (mmx > 0)
       add(
         "linear-gradient(160deg,#ffd400 0%,#ff7a00 55%,#3a1a00 100%)",
-        `<div class="wr-k wu wd1">Seu mês mais forte</div><div class="wr-b wp wd2">${MN[hi]}</div><div class="wr-sm wu wd3">${hh(mmx)} estudadas</div><div class="wr-bars">${mv.map((v, k) => `<i${k === hi ? ' class="hi"' : ""} style="--h:${Math.max(3, Math.round((v / mmx) * 100))}%;--n:${k}"></i>`).join("")}</div><div class="wr-lb">${MI.map((m) => `<span>${m}</span>`).join("")}</div>`,
+        `<div class="wr-k wu wd1">Seu mês mais forte</div><div class="wr-b wp wd2">${MN[hi]}</div><div class="wr-sm wu wd3">${hh(mmx)} estudadas</div>${barsW(mv, hi, MI)}`,
       );
+    /* 10 dia da semana */
+    if (wmx > 0)
+      add(
+        "linear-gradient(160deg,#36d1dc 0%,#5b86e5 55%,#0b1330 100%)",
+        `<div class="wr-k wu wd1">Seu dia da semana</div><div class="wr-b wp wd2">${WDN[wi]} é o seu dia</div><div class="wr-sm wu wd3">média de ${hh(Math.round(wmx))} por dia</div>${barsW(wv, wi, ["S", "T", "Q", "Q", "S", "S", "D"])}`,
+      );
+    /* 11 horário nobre */
+    if (sumH > 0)
+      add(
+        "linear-gradient(160deg,#42275a 0%,#734b6d 50%,#0d0716 100%)",
+        `<div class="wr-k wu wd1">Seu horário nobre</div><div class="wr-b wp wd2">${pk}h às ${(pk + 1) % 24}h</div><div class="wr-sm wu wd3">${dom ? "Você estuda mais no período " + dom.w + "." : ""}</div>${barsW(H, pk, H.map((_, k) => (k % 6 === 0 ? k + "h" : "")), "t24")}`,
+      );
+    /* 12 blocos de foco */
+    const ses = p.ses || [];
+    if (ses.length) {
+      const sm = ses.reduce((a, x) => a + x.m, 0);
+      add(
+        "linear-gradient(160deg,#00c6ff 0%,#0072ff 55%,#02102e 100%)",
+        `<div class="wr-sm wu wd1">Você fez</div><div class="wr-num wp wd2">${cnt(ses.length)}<small>blocos</small></div><div class="wr-sm wu wd4">de foco, com ${hh(Math.round(sm / ses.length))} em média cada.</div>${st.blk ? `<div class="wr-row wu wd5">⏱️ Maior bloco: ${hh(Math.round(st.blk))} sem parar</div>` : ""}`,
+      );
+    }
+    /* 13 foco e aprendizados */
+    const lg2 = (S.log || []).filter((x) => x.d >= p.from && x.d <= p.to),
+      fo = lg2.filter((x) => x.f > 0),
+      apr = lg2.filter((x) => x.w).length,
+      dn = DONE(p).length,
+      af = fo.length ? fo.reduce((a, x) => a + x.f, 0) / fo.length : 0;
+    if (fo.length || apr || dn) {
+      let k = 0;
+      add(
+        "linear-gradient(160deg,#f7971e 0%,#ffd200 40%,#c2410c 100%)",
+        `<div class="wr-k wu wd1">Foco e aprendizados</div>${fo.length ? `<div class="wr-num wp wd2">★ ${af.toFixed(1).replace(".", ",")}</div><div class="wr-sm wu wd3">foco médio, de 1 a 5</div>` : ""}${apr ? row("📝 " + pl_(apr, "aprendizado registrado", "aprendizados registrados"), k++ + 3) : ""}${dn ? row("✅ " + pl_(dn, "tópico concluído", "tópicos concluídos"), k++ + 3) : ""}`,
+      );
+    }
+    /* 14 conquistas */
+    const lgh = LGH(p),
+      ups = lgh.filter((x) => x.r === "up").length,
+      chh = CHH(p),
+      chw = chh.filter((x) => x.res === "win").length,
+      buys = ((S.shop && S.shop.buy) || []).filter((x) => {
+        const k = fmt(new Date(x.t));
+        return k >= p.from && k <= p.to;
+      }).length;
+    let elos = 0;
+    Object.entries((S.elos && S.elos.h) || {}).forEach(([k, v]) => {
+      if (k >= p.from && k <= p.to) elos += Math.max(0, v);
+    });
+    const cq = [];
+    if (lgh.length)
+      cq.push("🏅 Liga final: " + LGN(lgh[lgh.length - 1].to) + (ups ? " · " + pl_(ups, "subida", "subidas") : ""));
+    if (chh.length) cq.push("🛡️ " + chw + " de " + pl_(chh.length, "desafio vencido", "desafios vencidos"));
+    if (elos > 0) cq.push("🪙 " + Math.round(elos) + " Elos ganhos");
+    if (buys) cq.push("🛒 " + pl_(buys, "compra", "compras") + " na loja");
+    if (cq.length)
+      add(
+        "linear-gradient(160deg,#f6d365 0%,#fda085 45%,#3b1f0a 100%)",
+        `<div class="wr-em wp wd1">🏆</div><div class="wr-k wu wd2">Suas conquistas</div>${cq.map((x, k) => row(x, k + 2)).join("")}`,
+      );
+    /* 15 comparação com o ano anterior */
     const pv = yrs().includes(Y - 1) ? resFor(Y - 1) : null;
     if (pv && pv.st === "final" && pv.R.stat && pv.R.stat.m > 0) {
       const d = Math.round((st.m / pv.R.stat.m - 1) * 100);
@@ -1714,6 +1837,37 @@
         `<div class="wr-k wu wd1">Comparado a ${Y - 1}</div><div class="wr-num wp wd2"><span data-cu="${Math.abs(d)}" data-pf="${d >= 0 ? "▲ +" : "▼ −"}" data-sf="%">${d >= 0 ? "▲ +" : "▼ −"}${Math.abs(d)}%</span></div><div class="wr-sm wu wd4">${d >= 0 ? "mais horas de estudo do que no ano passado." : "um ano mais leve. O próximo é a hora da virada."}</div>`,
       );
     }
+    /* 16 tipo de estudante */
+    if (dom || trait)
+      add(
+        "linear-gradient(160deg,#6a11cb 0%,#2575fc 55%,#0a0a2a 100%)",
+        `${sp}<div class="wr-k wu wd1">Seu tipo de estudante</div><div class="wr-b wp wd3">${persona}</div>${dom ? `<div class="wr-sm wu wd4">${dom.d} ${Math.round((dom.v / sumH) * 100)}% do seu estudo foi no período ${dom.w}.</div>` : ""}${trait ? `<div class="wr-row wu wd5">com um toque de ${trait[0]}: ${trait[1]}</div>` : ""}`,
+      );
+    /* 17 cor do ano */
+    const CL = SBA.slice(0, 6).filter((o) => o.s && o.s.color),
+      ctot = CL.reduce((a, o) => a + o.tot, 0);
+    if (CL.length >= 2 && ctot > 0) {
+      let acc = 0;
+      const stops = CL.map((o) => {
+        const mid = Math.round(((acc + o.tot / 2) / ctot) * 100);
+        acc += o.tot;
+        return `${o.s.color} ${mid}%`;
+      }).join(",");
+      add(
+        `linear-gradient(160deg,${stops})`,
+        `<div class="wr-k wu wd1">A cor do seu ano</div><div class="wr-sm wu wd2">Misturamos as cores das suas matérias, na proporção das horas.</div>${CL.slice(0, 4)
+          .map((o, k) =>
+            row(`<span class="wr-dot" style="background:${o.s.color}"></span>${esc(o.nm)} · ${Math.round((o.tot / ctot) * 100)}%`, k + 2),
+          )
+          .join("")}`,
+      );
+    }
+    /* 18 seu ano em uma frase */
+    add(
+      "linear-gradient(160deg,#ff8a00 0%,#e52e71 55%,#1a0a2e 100%)",
+      `<div class="wr-k wu wd1">Seu ano em uma frase</div><div class="wr-b wp wd2">Você é ${persona}</div>${wmx > 0 ? `<div class="wr-sm wu wd3">tem ${WDN[wi]} como dia forte</div>` : ""}${mmx > 0 ? `<div class="wr-sm wu wd4">e ${MN[hi]} como mês de ouro.</div>` : ""}<div class="wr-row wu wd5">${pl_(st.d, "dia", "dias")} · ${hrs}h · sequência de ${pl_(st.st || 0, "dia", "dias")}</div>`,
+    );
+    /* 19 final */
     add(
       "linear-gradient(160deg,#4b1fa8 0%,#2a1d5c 55%,#150f30 100%)",
       `${sp}<div class="wr-em wp wd1">🏆</div><div class="wr-b wp wd2">Foi um ano e tanto!</div><div class="wr-sm wu wd4">Agora vem a premiação.</div><button class="wr-btn wu wd5" data-wr="replay">🔁 Rever resumo</button>`,
@@ -1752,9 +1906,7 @@
     return `<div class="aw-sc"><table><thead><tr><th>Desafio</th><th>Recorde atual</th><th>${R.Y}</th></tr></thead><tbody>${L.map(
       (x) =>
         `<tr><td><b>${chalGoal(x)}</b><br><span class="sub">${x.n}</span></td><td>${F[x.f](x.rec)}</td><td>${F[x.f](x.cur)}${x.cur >= x.rec ? " 🔨" : ""}</td></tr>`,
-    ).join(
-      "",
-    )}</tbody></table></div><p class="sub">Metas calculadas a partir dos seus recordes. Passar do recorde atual é recorde histórico.</p>`;
+    ).join("")}</tbody></table></div><p class="sub">Metas calculadas a partir dos seus recordes. Passar do recorde atual é recorde histórico.</p>`;
   }
   const chalSec = (R) =>
     chalData(R).length
