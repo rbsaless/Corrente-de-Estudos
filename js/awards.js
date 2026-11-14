@@ -1516,9 +1516,129 @@
     const hi = v.indexOf(mx);
     return `<div class="aw-sec"><h2>📊 Horas por ano</h2>${barsHtml(v, ys.map(String), hi)}<div class="aw-m">Melhor ano: <b>${ys[hi]}</b> · ${hh(mx)}</div></div>`;
   }
-  function introHtml(R) {
-    const p = P(R.Y, R.to),
-      st = R.stat;
+  /* ---------- 🎬 Seu ano em 60 segundos (estilo "Wrapped": slides animados, avançam sozinhos; toque nas laterais para navegar) ---------- */
+  const WR = { t: 0, i: 0 },
+    WR_DUR = 5200;
+  function wrCss() {
+    if (document.getElementById("aw-wr-css")) return;
+    const s = document.createElement("style");
+    s.id = "aw-wr-css";
+    s.textContent = `#aw-wr{position:relative;width:100%;max-width:380px;aspect-ratio:9/14;max-height:78vh;margin:0 auto;border-radius:26px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.45);color:#fff;text-align:center;user-select:none;-webkit-user-select:none}
+#aw-wr .wr-s{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:56px 22px 30px;opacity:0;visibility:hidden;transition:opacity .45s;background-size:100% 170%;overflow:hidden}
+#aw-wr .wr-s.on{opacity:1;visibility:visible;animation:wr-bg 9s ease-in-out infinite alternate}
+#aw-wr .wr-s:before,#aw-wr .wr-s:after{content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.13);pointer-events:none}
+#aw-wr .wr-s:before{width:280px;height:280px;top:-90px;right:-110px}
+#aw-wr .wr-s:after{width:220px;height:220px;bottom:-80px;left:-90px;background:rgba(255,255,255,.09)}
+#aw-wr .wr-s.on:before{animation:wr-drift 7s ease-in-out infinite alternate}
+#aw-wr .wr-s.on:after{animation:wr-drift 8s ease-in-out infinite alternate-reverse}
+#aw-wr .wr-s>*{position:relative;z-index:1}
+#aw-wr .wr-k{font-size:1rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.92}
+#aw-wr .wr-b{font-size:clamp(2rem,9vw,3rem);font-weight:900;line-height:1.05;text-shadow:0 2px 14px rgba(0,0,0,.25)}
+#aw-wr .wr-num{font-size:clamp(3.6rem,18vw,6rem);font-weight:900;line-height:1;letter-spacing:-.03em;text-shadow:0 4px 22px rgba(0,0,0,.3)}
+#aw-wr .wr-num small{font-size:.36em;margin-left:6px;font-weight:800;letter-spacing:0}
+#aw-wr .wr-sm{font-size:1.02rem;opacity:.95;max-width:26ch;line-height:1.35}
+#aw-wr .wr-em{font-size:4.4rem;line-height:1}
+#aw-wr .wr-row{font-size:1.15rem;font-weight:700;background:rgba(0,0,0,.2);border-radius:14px;padding:8px 16px;min-width:70%}
+#aw-wr .wu,#aw-wr .wp,#aw-wr .wsp{opacity:0}
+#aw-wr .on .wu{animation:wr-up .7s ease-out both}
+#aw-wr .on .wp{animation:wr-pop .85s cubic-bezier(.2,1.4,.4,1) both}
+#aw-wr .on .wsp{animation:wr-float 3.6s ease-in infinite}
+#aw-wr .wd1{animation-delay:.15s!important}#aw-wr .wd2{animation-delay:.55s!important}#aw-wr .wd3{animation-delay:1s!important}#aw-wr .wd4{animation-delay:1.5s!important}#aw-wr .wd5{animation-delay:2s!important}#aw-wr .wd6{animation-delay:2.5s!important}
+#aw-wr .wsp{position:absolute!important;bottom:6%;font-size:1.4rem}
+#aw-wr .wr-bars{display:flex;align-items:flex-end;gap:5px;height:110px;width:100%;margin-top:8px}
+#aw-wr .wr-bars i{flex:1;border-radius:5px 5px 0 0;background:rgba(255,255,255,.5);transform-origin:bottom;height:var(--h);transform:scaleY(0)}
+#aw-wr .wr-bars i.hi{background:#fff;box-shadow:0 0 18px rgba(255,255,255,.85)}
+#aw-wr .on .wr-bars i{animation:wr-grow .7s calc(.6s + var(--n)*.08s) both}
+#aw-wr .wr-lb{display:flex;gap:5px;width:100%;font-size:.68rem;opacity:.85}#aw-wr .wr-lb span{flex:1}
+#aw-wr .wr-pg{position:absolute;top:12px;left:12px;right:12px;display:flex;gap:4px;z-index:4}
+#aw-wr .wr-pg i{flex:1;height:3px;border-radius:3px;background:rgba(255,255,255,.3);overflow:hidden;position:relative}
+#aw-wr .wr-pg i.done:after{content:"";position:absolute;inset:0;background:#fff}
+#aw-wr .wr-pg i.cur:after{content:"";position:absolute;left:0;top:0;bottom:0;background:#fff;animation:wr-fill ${WR_DUR}ms linear forwards}
+#aw-wr .wr-t{position:absolute;top:28px;bottom:0;z-index:3;cursor:pointer}#aw-wr .wr-t.l{left:0;width:34%}#aw-wr .wr-t.r{right:0;width:66%}
+#aw-wr .wr-btn{margin-top:12px;padding:10px 20px;border-radius:999px;border:0;background:#fff;color:#1b1030;font-weight:800;cursor:pointer;position:relative;z-index:5}
+@keyframes wr-bg{from{background-position:0 0}to{background-position:0 100%}}
+@keyframes wr-drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-26px,30px) scale(1.15)}}
+@keyframes wr-up{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:none}}
+@keyframes wr-pop{0%{opacity:0;transform:scale(.35)}60%{opacity:1;transform:scale(1.12)}100%{opacity:1;transform:scale(1)}}
+@keyframes wr-grow{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes wr-fill{from{width:0}to{width:100%}}
+@keyframes wr-float{0%{opacity:0;transform:translateY(0) rotate(0)}15%{opacity:1}100%{opacity:0;transform:translateY(-190px) rotate(40deg)}}
+@media (prefers-reduced-motion:reduce){#aw-wr *{animation-duration:.01s!important;animation-delay:0s!important;transition:none!important}}`;
+    document.head.appendChild(s);
+  }
+  function wrCount(el) {
+    const to = +el.dataset.cu,
+      fm = el.dataset.fm,
+      pf = el.dataset.pf || "",
+      sf = el.dataset.sf || "",
+      t0 = performance.now() + 350,
+      D = 1500;
+    const put = (v) => {
+      el.textContent =
+        pf +
+        (fm === "hm"
+          ? hh(Math.round(v))
+          : Math.round(v).toLocaleString("pt-BR")) +
+        sf;
+    };
+    put(0);
+    const step = (t) => {
+      if (!document.contains(el)) return;
+      const k = Math.max(0, Math.min(1, (t - t0) / D));
+      put(to * (1 - Math.pow(1 - k, 3)));
+      if (k < 1 && el.closest(".wr-s.on")) requestAnimationFrame(step);
+      else put(to);
+    };
+    requestAnimationFrame(step);
+  }
+  function wrGo(i) {
+    const root = document.getElementById("aw-wr");
+    clearTimeout(WR.t);
+    if (!root) return;
+    const SL = root.querySelectorAll(".wr-s"),
+      G = root.querySelectorAll(".wr-pg i");
+    i = Math.max(0, Math.min(SL.length - 1, i));
+    WR.i = i;
+    SL.forEach((s, k) => s.classList.toggle("on", k === i));
+    G.forEach((g, k) => {
+      g.className = k < i ? "done" : k === i ? "cur" : "";
+    });
+    root.querySelectorAll(".wr-s.on [data-cu]").forEach(wrCount);
+    if (i < SL.length - 1)
+      WR.t = setTimeout(() => {
+        if (document.getElementById("aw-wr") === root) wrGo(i + 1);
+      }, WR_DUR);
+  }
+  function wrInit() {
+    const root = document.getElementById("aw-wr");
+    if (!root) {
+      clearTimeout(WR.t);
+      return;
+    }
+    wrGo(0);
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-wr]");
+    if (!b) return;
+    const a = b.dataset.wr;
+    if (a === "next") wrGo(WR.i + 1);
+    else if (a === "prev") wrGo(WR.i - 1);
+    else if (a === "replay") wrGo(0);
+  });
+  function wrapHtml(R) {
+    wrCss();
+    const Y = R.Y,
+      p = P(Y, R.to),
+      st = R.stat,
+      sl = [],
+      add = (bg, inner) =>
+        sl.push(
+          `<div class="wr-s" style="background-image:${bg}">${inner}</div>`,
+        );
+    const hrs = Math.round(st.m / 60),
+      tot = Math.max(1, diff(p.from, R.to) + 1),
+      cnt = (v, extra) =>
+        `<span data-cu="${v}"${extra || ""}>${v.toLocaleString("pt-BR")}</span>`;
     let bk = null,
       bm = 0;
     p.dk.forEach((k) => {
@@ -1527,28 +1647,78 @@
         bk = k;
       }
     });
-    const sb = ng(p)
-      .slice()
-      .sort((a, b) => b.tot - a.tot)[0];
-    const cell = (e, t, v, s) =>
-      `<div class="aw-card"><div class="aw-ct"><span>${e}</span>${t}</div><div class="aw-w">${v}</div>${s ? `<div class="aw-m">${s}</div>` : ""}</div>`;
-    return (
-      `<div class="aw-grid">` +
-      cell("⏱️", "Horas no ano", hh(st.m), "") +
-      cell("📆", "Dias estudados", st.d + "", "") +
-      (bk
-        ? cell(
-            "🏃",
-            "Melhor dia",
-            hh(bm),
-            DIAS[(parse(bk).getDay() + 6) % 7] + " " + bd(bk),
-          )
-        : "") +
-      (sb ? cell("📚", "Matéria mais estudada", esc(sb.nm), hh(sb.tot)) : "") +
-      `</div>` +
-      cmpHtml(R) +
-      monthsHtml(R.Y, R.to)
+    const SBs = ng(p)
+        .slice()
+        .sort((a, b) => b.tot - a.tot)
+        .slice(0, 3),
+      mv = p.mo.map((o) => o.m),
+      mmx = Math.max(0, ...mv),
+      hi = mv.indexOf(mmx);
+    const sp = [
+      [8, 0, "✨"],
+      [24, 1.1, "🎧"],
+      [42, 0.5, "⭐"],
+      [60, 1.8, "✨"],
+      [76, 0.9, "🎵"],
+      [90, 2.2, "⭐"],
+    ]
+      .map(
+        ([l, d, e]) =>
+          `<span class="wsp" style="left:${l}%;animation-delay:${d}s">${e}</span>`,
+      )
+      .join("");
+    add(
+      "linear-gradient(160deg,#1ed760 0%,#0b8a45 45%,#06170e 100%)",
+      `${sp}<div class="wr-k wu wd1">Seu ${Y}</div><div class="wr-b wp wd2">em estudos</div><div class="wr-sm wu wd4">Vamos ver como foi o seu ano?</div>`,
     );
+    add(
+      "linear-gradient(160deg,#ff4ecd 0%,#7b2ff7 55%,#1b0b3a 100%)",
+      `<div class="wr-sm wu wd1">Você estudou</div><div class="wr-num wp wd2">${cnt(hrs)}<small>h</small></div><div class="wr-sm wu wd4">É o mesmo que ${(hrs / 24).toFixed(1).replace(".", ",")} dias inteiros, 24 horas por dia.</div>`,
+    );
+    add(
+      "linear-gradient(160deg,#ffb100 0%,#ff5e2b 55%,#3a0f0b 100%)",
+      `<div class="wr-sm wu wd1">Foram</div><div class="wr-num wp wd2">${cnt(st.d)}<small>dias</small></div><div class="wr-sm wu wd4">de estudo, ${Math.round((st.d / tot) * 100)}% do ano. A constância é o seu superpoder.</div>`,
+    );
+    if (st.st > 0)
+      add(
+        "linear-gradient(160deg,#ff3b3b 0%,#c2185b 55%,#2a0a1a 100%)",
+        `<div class="wr-em wp wd1">🔥</div><div class="wr-sm wu wd2">Sua maior sequência</div><div class="wr-num wp wd3">${cnt(st.st)}<small>dias</small></div><div class="wr-sm wu wd5">seguidos, sem deixar a chama apagar.</div>`,
+      );
+    if (bk)
+      add(
+        "linear-gradient(160deg,#2d7dff 0%,#5b2bd8 55%,#0b0a2e 100%)",
+        `<div class="wr-k wu wd1">Seu dia mais insano</div><div class="wr-b wp wd2">${DIAS[(parse(bk).getDay() + 6) % 7]}, ${bd(bk)}</div><div class="wr-num wp wd4"><span data-cu="${Math.round(bm)}" data-fm="hm">${hh(Math.round(bm))}</span></div><div class="wr-sm wu wd5">de estudo em um único dia.</div>`,
+      );
+    if (SBs.length)
+      add(
+        "linear-gradient(160deg,#00d4b4 0%,#0a7d8c 55%,#04141f 100%)",
+        `<div class="wr-k wu wd1">Sua matéria do ano</div><div class="wr-b wp wd2">${esc(SBs[0].nm)}</div><div class="wr-sm wu wd3">${hh(SBs[0].tot)} de dedicação</div>${SBs.slice(
+          1,
+        )
+          .map(
+            (o, k) =>
+              `<div class="wr-row wu wd${4 + k}">${k + 2}º ${esc(o.nm)} · ${hh(o.tot)}</div>`,
+          )
+          .join("")}`,
+      );
+    if (mmx > 0)
+      add(
+        "linear-gradient(160deg,#ffd400 0%,#ff7a00 55%,#3a1a00 100%)",
+        `<div class="wr-k wu wd1">Seu mês mais forte</div><div class="wr-b wp wd2">${MN[hi]}</div><div class="wr-sm wu wd3">${hh(mmx)} estudadas</div><div class="wr-bars">${mv.map((v, k) => `<i${k === hi ? ' class="hi"' : ""} style="--h:${Math.max(3, Math.round((v / mmx) * 100))}%;--n:${k}"></i>`).join("")}</div><div class="wr-lb">${MI.map((m) => `<span>${m}</span>`).join("")}</div>`,
+      );
+    const pv = yrs().includes(Y - 1) ? resFor(Y - 1) : null;
+    if (pv && pv.st === "final" && pv.R.stat && pv.R.stat.m > 0) {
+      const d = Math.round((st.m / pv.R.stat.m - 1) * 100);
+      add(
+        "linear-gradient(160deg,#1ed760 0%,#0a8f6a 55%,#04140f 100%)",
+        `<div class="wr-k wu wd1">Comparado a ${Y - 1}</div><div class="wr-num wp wd2"><span data-cu="${Math.abs(d)}" data-pf="${d >= 0 ? "▲ +" : "▼ −"}" data-sf="%">${d >= 0 ? "▲ +" : "▼ −"}${Math.abs(d)}%</span></div><div class="wr-sm wu wd4">${d >= 0 ? "mais horas de estudo do que no ano passado." : "um ano mais leve. O próximo é a hora da virada."}</div>`,
+      );
+    }
+    add(
+      "linear-gradient(160deg,#4b1fa8 0%,#2a1d5c 55%,#150f30 100%)",
+      `${sp}<div class="wr-em wp wd1">🏆</div><div class="wr-b wp wd2">Foi um ano e tanto!</div><div class="wr-sm wu wd4">Agora vem a premiação.</div><button class="wr-btn wu wd5" data-wr="replay">🔁 Rever resumo</button>`,
+    );
+    return `<div id="aw-wr"><div class="wr-pg">${sl.map(() => "<i></i>").join("")}</div>${sl.join("")}<div class="wr-t l" data-wr="prev"></div><div class="wr-t r" data-wr="next"></div></div>`;
   }
   /* desafios para o ano seguinte: metas por regra, a partir dos recordes até o ano da cerimônia */
   function chalData(R) {
@@ -1643,7 +1813,7 @@
       last = i + 1 >= N;
     let h = `<div class="aw-stage"><div class="aw-prog">Cerimônia ${Y} · ${i + 1} de ${N}</div>`;
     if (c.intro) {
-      h += `<div class="aw-ct big">🎬 Seu ano em 60 segundos</div><div class="aw-sec">${introHtml(R)}</div>`;
+      h += `<div class="aw-ct big">🎬 Seu ano em 60 segundos</div>${wrapHtml(R)}<div class="aw-m">Toque na lateral direita ou esquerda para avançar ou voltar.</div>`;
     } else if (c.chal) {
       h += `<div class="aw-ct big">🎯 Desafios para ${Y + 1}</div><div class="aw-sec">${chalTable(R)}</div>`;
     } else if (c.top) {
@@ -1916,6 +2086,11 @@
     if (el._h !== h) {
       el.innerHTML = h;
       el._h = h;
+      try {
+        wrInit();
+      } catch (e) {
+        console.error("Wrapped:", e);
+      }
     }
   }
 
