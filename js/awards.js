@@ -1517,8 +1517,8 @@
     return `<div class="aw-sec"><h2>📊 Horas por ano</h2>${barsHtml(v, ys.map(String), hi)}<div class="aw-m">Melhor ano: <b>${ys[hi]}</b> · ${hh(mx)}</div></div>`;
   }
   /* ---------- 🎬 Seu ano em 60 segundos (estilo "Wrapped": slides animados, avançam sozinhos; toque nas laterais para navegar) ---------- */
-  const WR = { t: 0, i: 0 },
-    WR_DUR = 4800;
+  const WR = { t: 0, i: 0, paused: false, t0: 0, rem: 0 },
+    WR_DUR = 7500;
   function wrCss() {
     if (document.getElementById("aw-wr-css")) return;
     const s = document.createElement("style");
@@ -1561,6 +1561,9 @@
 #aw-wr .wr-rk i{position:absolute;left:0;bottom:0;height:4px;width:var(--w);background:#fff;transform-origin:left;transform:scaleX(0)}
 #aw-wr .on .wr-rk i{animation:wr-growx .9s calc(.7s + var(--n)*.3s) both}
 #aw-wr .wr-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px}
+#aw-wr .wr-pb{position:absolute;top:22px;right:12px;z-index:6;width:26px;height:26px;border-radius:50%;border:0;background:rgba(0,0,0,.28);color:#fff;font-size:.68rem;line-height:1;cursor:pointer;opacity:.5;padding:0;display:flex;align-items:center;justify-content:center}
+#aw-wr .wr-pb:hover,#aw-wr.wr-paused .wr-pb{opacity:1}
+#aw-wr.wr-paused .wr-pg i.cur:after{animation-play-state:paused}
 @keyframes wr-growx{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes wr-bg{from{background-position:0 0}to{background-position:0 100%}}
 @keyframes wr-drift{from{transform:translate(0,0) scale(1)}to{transform:translate(-26px,30px) scale(1.15)}}
@@ -1597,6 +1600,16 @@
     };
     requestAnimationFrame(step);
   }
+  function wrArm(root, i, ms) {
+    clearTimeout(WR.t);
+    WR.rem = ms;
+    WR.t0 = Date.now();
+    const n = root.querySelectorAll(".wr-s").length;
+    if (WR.paused || i >= n - 1) return;
+    WR.t = setTimeout(() => {
+      if (document.getElementById("aw-wr") === root) wrGo(i + 1);
+    }, ms);
+  }
   function wrGo(i) {
     const root = document.getElementById("aw-wr");
     clearTimeout(WR.t);
@@ -1610,10 +1623,30 @@
       g.className = k < i ? "done" : k === i ? "cur" : "";
     });
     root.querySelectorAll(".wr-s.on [data-cu]").forEach(wrCount);
-    if (i < SL.length - 1)
-      WR.t = setTimeout(() => {
-        if (document.getElementById("aw-wr") === root) wrGo(i + 1);
-      }, WR_DUR);
+    wrArm(root, i, WR_DUR);
+  }
+  function wrPause() {
+    const root = document.getElementById("aw-wr");
+    if (!root) return;
+    const b = root.querySelector(".wr-pb");
+    if (WR.paused) {
+      WR.paused = false;
+      root.classList.remove("wr-paused");
+      if (b) {
+        b.textContent = "⏸";
+        b.setAttribute("aria-label", "Pausar");
+      }
+      wrArm(root, WR.i, Math.max(400, WR.rem));
+    } else {
+      WR.paused = true;
+      clearTimeout(WR.t);
+      WR.rem = Math.max(400, WR.rem - (Date.now() - WR.t0));
+      root.classList.add("wr-paused");
+      if (b) {
+        b.textContent = "▶";
+        b.setAttribute("aria-label", "Continuar");
+      }
+    }
   }
   function wrInit() {
     const root = document.getElementById("aw-wr");
@@ -1621,6 +1654,7 @@
       clearTimeout(WR.t);
       return;
     }
+    WR.paused = false;
     wrGo(0);
   }
   document.addEventListener("click", (e) => {
@@ -1630,6 +1664,14 @@
     if (a === "next") wrGo(WR.i + 1);
     else if (a === "prev") wrGo(WR.i - 1);
     else if (a === "replay") wrGo(0);
+    else if (a === "pause") wrPause();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== " " || !document.getElementById("aw-wr")) return;
+    const tg = e.target;
+    if (tg && /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(tg.tagName)) return;
+    e.preventDefault();
+    wrPause();
   });
   function wrapHtml(R) {
     wrCss();
@@ -1638,7 +1680,9 @@
       st = R.stat,
       sl = [],
       add = (bg, inner) =>
-        sl.push(`<div class="wr-s" style="background-image:${bg}">${inner}</div>`);
+        sl.push(
+          `<div class="wr-s" style="background-image:${bg}">${inner}</div>`,
+        );
     const hrs = Math.round(st.m / 60),
       tot = Math.max(1, diff(p.from, R.to) + 1),
       cnt = (v, extra) =>
@@ -1669,10 +1713,34 @@
     const H = p.H,
       sumH = H.reduce((a, x) => a + x, 0),
       per = [
-        ["🦉 Coruja da madrugada", 0, 5, "Seu foco acorda quando o mundo dorme.", "da madrugada (0h às 5h)"],
-        ["🌅 Estudante matinal", 5, 12, "Você aproveita as primeiras horas do dia.", "da manhã (5h às 12h)"],
-        ["☀️ Estudante da tarde", 12, 18, "A tarde é o seu território.", "da tarde (12h às 18h)"],
-        ["🌙 Guardião da noite", 18, 24, "É quando o silêncio ajuda o seu foco.", "da noite (18h às 24h)"],
+        [
+          "🦉 Coruja da madrugada",
+          0,
+          5,
+          "Seu foco acorda quando o mundo dorme.",
+          "da madrugada (0h às 5h)",
+        ],
+        [
+          "🌅 Estudante matinal",
+          5,
+          12,
+          "Você aproveita as primeiras horas do dia.",
+          "da manhã (5h às 12h)",
+        ],
+        [
+          "☀️ Estudante da tarde",
+          12,
+          18,
+          "A tarde é o seu território.",
+          "da tarde (12h às 18h)",
+        ],
+        [
+          "🌙 Guardião da noite",
+          18,
+          24,
+          "É quando o silêncio ajuda o seu foco.",
+          "da noite (18h às 24h)",
+        ],
       ].map(([n, a, b, d, w]) => ({
         n,
         d,
@@ -1688,9 +1756,15 @@
       avgD = st.d ? st.m / st.d : 0,
       trait =
         cons >= 0.75
-          ? ["🎯 Constante", "estudou em " + Math.round(cons * 100) + "% dos dias do ano"]
+          ? [
+              "🎯 Constante",
+              "estudou em " + Math.round(cons * 100) + "% dos dias do ano",
+            ]
           : avgD > 0 && bm >= 3 * avgD
-            ? ["🏃 Maratonista", "chegou a estudar " + hh(Math.round(bm)) + " em um único dia"]
+            ? [
+                "🏃 Maratonista",
+                "chegou a estudar " + hh(Math.round(bm)) + " em um único dia",
+              ]
             : SBA.length >= 5
               ? ["🧭 Explorador", "passeou por " + SBA.length + " matérias"]
               : null,
@@ -1739,7 +1813,9 @@
     if (SBs.length)
       add(
         "linear-gradient(160deg,#00d4b4 0%,#0a7d8c 55%,#04141f 100%)",
-        `<div class="wr-k wu wd1">Sua matéria do ano</div><div class="wr-b wp wd2">${esc(SBs[0].nm)}</div><div class="wr-sm wu wd3">${hh(SBs[0].tot)} de dedicação</div>${SBs.slice(1)
+        `<div class="wr-k wu wd1">Sua matéria do ano</div><div class="wr-b wp wd2">${esc(SBs[0].nm)}</div><div class="wr-sm wu wd3">${hh(SBs[0].tot)} de dedicação</div>${SBs.slice(
+          1,
+        )
           .map(
             (o, k) =>
               `<div class="wr-row wu wd${4 + k}">${k + 2}º ${esc(o.nm)} · ${hh(o.tot)}</div>`,
@@ -1750,7 +1826,10 @@
     if (SBA.length >= 2)
       add(
         "linear-gradient(160deg,#ff8a00 0%,#e52e71 55%,#2a0a24 100%)",
-        `<div class="wr-k wu wd1">Seu top ${Math.min(5, SBA.length)} do ano</div>${SBA.slice(0, 5)
+        `<div class="wr-k wu wd1">Seu top ${Math.min(5, SBA.length)} do ano</div>${SBA.slice(
+          0,
+          5,
+        )
           .map(
             (o, k) =>
               `<div class="wr-rk wu" style="animation-delay:${(0.45 + k * 0.3).toFixed(2)}s"><span>${k + 1}º ${esc(o.nm)}</span><b>${hh(o.tot)}</b><i style="--w:${Math.max(4, Math.round((o.tot / SBA[0].tot) * 100))}%;--n:${k}"></i></div>`,
@@ -1780,7 +1859,12 @@
     if (sumH > 0)
       add(
         "linear-gradient(160deg,#42275a 0%,#734b6d 50%,#0d0716 100%)",
-        `<div class="wr-k wu wd1">Seu horário nobre</div><div class="wr-b wp wd2">${pk}h às ${(pk + 1) % 24}h</div><div class="wr-sm wu wd3">${dom ? "Você estuda mais no período " + dom.w + "." : ""}</div>${barsW(H, pk, H.map((_, k) => (k % 6 === 0 ? k + "h" : "")), "t24")}`,
+        `<div class="wr-k wu wd1">Seu horário nobre</div><div class="wr-b wp wd2">${pk}h às ${(pk + 1) % 24}h</div><div class="wr-sm wu wd3">${dom ? "Você estuda mais no período " + dom.w + "." : ""}</div>${barsW(
+          H,
+          pk,
+          H.map((_, k) => (k % 6 === 0 ? k + "h" : "")),
+          "t24",
+        )}`,
       );
     /* 12 blocos de foco */
     const ses = p.ses || [];
@@ -1819,8 +1903,18 @@
     });
     const cq = [];
     if (lgh.length)
-      cq.push("🏅 Liga final: " + LGN(lgh[lgh.length - 1].to) + (ups ? " · " + pl_(ups, "subida", "subidas") : ""));
-    if (chh.length) cq.push("🛡️ " + chw + " de " + pl_(chh.length, "desafio vencido", "desafios vencidos"));
+      cq.push(
+        "🏅 Liga final: " +
+          LGN(lgh[lgh.length - 1].to) +
+          (ups ? " · " + pl_(ups, "subida", "subidas") : ""),
+      );
+    if (chh.length)
+      cq.push(
+        "🛡️ " +
+          chw +
+          " de " +
+          pl_(chh.length, "desafio vencido", "desafios vencidos"),
+      );
     if (elos > 0) cq.push("🪙 " + Math.round(elos) + " Elos ganhos");
     if (buys) cq.push("🛒 " + pl_(buys, "compra", "compras") + " na loja");
     if (cq.length)
@@ -1855,9 +1949,15 @@
       }).join(",");
       add(
         `linear-gradient(160deg,${stops})`,
-        `<div class="wr-k wu wd1">A cor do seu ano</div><div class="wr-sm wu wd2">Misturamos as cores das suas matérias, na proporção das horas.</div>${CL.slice(0, 4)
+        `<div class="wr-k wu wd1">A cor do seu ano</div><div class="wr-sm wu wd2">Misturamos as cores das suas matérias, na proporção das horas.</div>${CL.slice(
+          0,
+          4,
+        )
           .map((o, k) =>
-            row(`<span class="wr-dot" style="background:${o.s.color}"></span>${esc(o.nm)} · ${Math.round((o.tot / ctot) * 100)}%`, k + 2),
+            row(
+              `<span class="wr-dot" style="background:${o.s.color}"></span>${esc(o.nm)} · ${Math.round((o.tot / ctot) * 100)}%`,
+              k + 2,
+            ),
           )
           .join("")}`,
       );
@@ -1872,7 +1972,7 @@
       "linear-gradient(160deg,#4b1fa8 0%,#2a1d5c 55%,#150f30 100%)",
       `${sp}<div class="wr-em wp wd1">🏆</div><div class="wr-b wp wd2">Foi um ano e tanto!</div><div class="wr-sm wu wd4">Agora vem a premiação.</div><button class="wr-btn wu wd5" data-wr="replay">🔁 Rever resumo</button>`,
     );
-    return `<div id="aw-wr"><div class="wr-pg">${sl.map(() => "<i></i>").join("")}</div>${sl.join("")}<div class="wr-t l" data-wr="prev"></div><div class="wr-t r" data-wr="next"></div></div>`;
+    return `<div id="aw-wr"><div class="wr-pg">${sl.map(() => "<i></i>").join("")}</div>${sl.join("")}<div class="wr-t l" data-wr="prev"></div><div class="wr-t r" data-wr="next"></div><button class="wr-pb" data-wr="pause" aria-label="Pausar" title="Pausar (barra de espaço)">⏸</button></div>`;
   }
   /* desafios para o ano seguinte: metas por regra, a partir dos recordes até o ano da cerimônia */
   function chalData(R) {
@@ -1906,7 +2006,9 @@
     return `<div class="aw-sc"><table><thead><tr><th>Desafio</th><th>Recorde atual</th><th>${R.Y}</th></tr></thead><tbody>${L.map(
       (x) =>
         `<tr><td><b>${chalGoal(x)}</b><br><span class="sub">${x.n}</span></td><td>${F[x.f](x.rec)}</td><td>${F[x.f](x.cur)}${x.cur >= x.rec ? " 🔨" : ""}</td></tr>`,
-    ).join("")}</tbody></table></div><p class="sub">Metas calculadas a partir dos seus recordes. Passar do recorde atual é recorde histórico.</p>`;
+    ).join(
+      "",
+    )}</tbody></table></div><p class="sub">Metas calculadas a partir dos seus recordes. Passar do recorde atual é recorde histórico.</p>`;
   }
   const chalSec = (R) =>
     chalData(R).length
