@@ -441,6 +441,19 @@ function renderCal() {
   S.subjects.forEach((s) =>
     (s.topics || []).forEach((x) => {
       if (x.date) (by[x.date] = by[x.date] || []).push({ s, x });
+      (x.subs || []).forEach((y) => {
+        if (y.date && !y.done)
+          (by[y.date] = by[y.date] || []).push({
+            s,
+            x: {
+              id: y.id,
+              name: "↳ " + y.name + " · " + x.name,
+              date: y.date,
+              done: false,
+              sub: true,
+            },
+          });
+      });
     }),
   );
   const studied = (k) => S.subjects.some((s) => k in s.days);

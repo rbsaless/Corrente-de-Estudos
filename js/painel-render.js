@@ -10,7 +10,7 @@ function taskRow(s, x, withDate) {
 function dayTop() {
   const t = fmt(now()),
     D = allTasksV()
-      .filter((o) => o.x.date === calSel)
+      .filter((o) => o.x.date === calSel && !(o.x.sub && o.x.done))
       .sort(taskCmp),
     dn = D.filter((o) => o.x.done).length;
   const title = parse(calSel).toLocaleDateString("pt-BR", {
@@ -165,6 +165,7 @@ function renderHomeTasks() {
   const L = allTasksV()
     .filter(
       (o) =>
+        !(o.x.sub && o.x.done) &&
         !o.s.arch &&
         o.x.date &&
         (o.x.date === t || (o.x.date < t && !o.x.done)),
