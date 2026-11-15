@@ -228,3 +228,14 @@ body.dragging,body.dragging *{cursor:grabbing!important;user-select:none!importa
 .up{color:#2a9d6f;font-weight:700}.dw{color:#e5484d;font-weight:700}.eq{color:var(--muted);font-weight:700}
 .hrow details{font-size:.85rem;color:var(--muted)}.hrow summary{cursor:pointer}
 .hrow details ul{margin:6px 0 0;padding-left:18px}
+
+/* subtarefas */
+.sbs{margin-top:6px}
+.sbt{display:flex;align-items:center;gap:8px;margin:6px 0 0 4px;padding-left:10px;border-left:2px solid var(--line)}
+.sbt .sbn{flex:1;min-width:0;color:var(--ink);font-size:.9rem;overflow-wrap:anywhere}
+.sbt.dn .sbn{text-decoration:line-through;color:var(--muted)}
+.sbt.dn .chk{background:var(--c,var(--accent,#ec4899))}
+.sbt .chk{width:20px;height:20px;min-width:20px;font-size:.7rem}
+.sbadd{display:flex;gap:6px;margin:8px 0 0 4px;flex-wrap:wrap}
+.sbadd input[type=text]{flex:1;min-width:120px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:6px 10px;color:var(--ink)}
+.sbadd input[type=date],.sbt input[type=date]{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:4px 8px;color:var(--ink)}

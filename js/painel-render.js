@@ -297,6 +297,58 @@ function topicCard(s) {
   const n = p.slice().sort(tsort)[0];
   return `<div class='nt'>📚 ${T.length - p.length} de ${T.length} tópicos · próximo: <b>${esc(n.name)}</b>${n.date ? " (" + br(n.date) + ")" : ""}</div>`;
 }
+/* ===== Subtarefas (x.subs) dentro de cada tarefa ===== */
+function subsBlock(s, x) {
+  const L = x.subs || [],
+    t = fmt(now()),
+    k = `data-sid='${s.id}' data-tid='${x.id}'`,
+    nd = L.filter((y) => y.done).length;
+  const rows = L.map((y) => {
+    const late = !y.done && y.date && y.date < t;
+    return `<div class='sbt${y.done ? " dn" : ""}'><button type='button' class='chk' data-sb='tog' ${k} data-bid='${y.id}' aria-label='${y.done ? "Reabrir subtarefa" : "Concluir subtarefa"}'>${y.done ? "✓" : ""}</button><span class='sbn'>${esc(y.name)}</span><input type='date' class='td${late ? " late" : ""}' value='${y.date || ""}' data-sb='date' ${k} data-bid='${y.id}' aria-label='Dia da subtarefa'><button type='button' class='ghost' data-sb='del' ${k} data-bid='${y.id}' aria-label='Excluir subtarefa'>✕</button></div>`;
+  }).join("");
+  return `<details class='sbs'${L.length ? " open" : ""}><summary>Subtarefas${L.length ? ` (${nd}/${L.length})` : ""}</summary>${rows}<div class='sbadd'><input type='text' maxlength='80' placeholder='Nova subtarefa' data-sb='name' ${k} aria-label='Nome da subtarefa'><input type='date' data-sb='ndate' ${k} aria-label='Dia da subtarefa'><button type='button' class='btn' data-sb='add' ${k}>＋</button></div></details>`;
+}
+function subsAct(el, act) {
+  const s = S.subjects.find((v) => v.id === el.dataset.sid),
+    x = s && (s.topics || []).find((v) => v.id === el.dataset.tid);
+  if (!x) return;
+  x.subs = x.subs || [];
+  const y = x.subs.find((v) => v.id === el.dataset.bid);
+  if (act === "add") {
+    const box = el.closest(".sbadd"),
+      n = box.querySelector("[data-sb=name]").value.trim();
+    if (!n) return toast("Digite o nome da subtarefa.");
+    x.subs.push({
+      id:
+        "b" + Date.now().toString(36) + Math.random().toString(36).slice(2, 4),
+      name: n,
+      date: box.querySelector("[data-sb=ndate]").value || "",
+      done: false,
+    });
+  } else if (act === "tog" && y) y.done = !y.done;
+  else if (act === "del") x.subs = x.subs.filter((v) => v !== y);
+  else if (act === "date" && y) y.date = el.value;
+  else return;
+  save();
+  render();
+  detail(s.id);
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-sb]");
+  if (b && ["add", "tog", "del"].includes(b.dataset.sb))
+    subsAct(b, b.dataset.sb);
+});
+document.addEventListener("change", (e) => {
+  if (e.target.dataset && e.target.dataset.sb === "date")
+    subsAct(e.target, "date");
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.dataset && e.target.dataset.sb === "name") {
+    e.preventDefault();
+    subsAct(e.target.parentNode.querySelector("[data-sb=add]"), "add");
+  }
+});
 function topicsBlock(s) {
   const T = s.topics || [],
     t = fmt(now()),
@@ -327,7 +379,7 @@ function topicsBlock(s) {
     )
     .join("")}</select>
   <input type='number' class='td' min='0' max='600' placeholder='min' style='width:78px' value='${x.est || ""}' ${at(x, "est")} aria-label='Tempo da tarefa (min)' title='Tempo da tarefa (min)'>${late ? '<span class="lt">Atrasado</span>' : tod && !x.done ? '<span class="tdy">Hoje</span>' : ""}</div>
-  <details><summary>Anotações${x.note ? " •" : ""}</summary><textarea ${at(x, "note")} placeholder='Resumo, dúvidas, links...'>${esc(x.note || "")}</textarea></details></div>
+  <details><summary>Anotações${x.note ? " •" : ""}</summary><textarea ${at(x, "note")} placeholder='Resumo, dúvidas, links...'>${esc(x.note || "")}</textarea></details>${subsBlock(s, x)}</div>
   <button class='ghost' data-a='tedit' data-id='${s.id}' data-tid='${x.id}' aria-label='Editar tarefa'>✎</button><button class='ghost' data-a='tdel' data-id='${s.id}' data-tid='${x.id}' aria-label='Excluir tópico'>✕</button></div>`;
       })
       .join("") ||
