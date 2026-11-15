@@ -1413,6 +1413,7 @@ const UF = {
   month: (v) => hh(v) + "/dia",
   pol: (v) => v + " matérias",
   iron: (v) => v + " dias",
+  cst: (v) => v + " dias",
   tot: hh,
 };
 function recDet(k) {
@@ -1433,6 +1434,7 @@ function recDet(k) {
       month: "Maior média mensal",
       pol: "Polímata",
       iron: "Hábito de ferro",
+      cst: "Constância (mín. 15 min/dia)",
       tot: "Tempo total acumulado",
     },
     h = o.hist || [],
@@ -2062,6 +2064,36 @@ function records(q) {
   );
   keep("pol", D[pol].n.size, bd(pol), "polímata", () => dayDet(pol));
   if (iron > 1) keep("iron", iron, ih + "h", "hábito de ferro", irD);
+  /* constância: dias seguidos com pelo menos 15 min de estudo (somando as matérias) */
+  const cRuns = [];
+  {
+    let st = "",
+      p = null,
+      c = 0;
+    Object.keys(D)
+      .filter((k) => D[k].m >= 15)
+      .sort()
+      .forEach((k) => {
+        if (p && diff(p, k) === 1) c++;
+        else {
+          if (p) cRuns.push([st, p, c]);
+          st = k;
+          c = 1;
+        }
+        p = k;
+      });
+    if (p) cRuns.push([st, p, c]);
+  }
+  const cBest = cRuns.reduce((r, x) => (x[2] > r[2] ? x : r), ["", "", 0]);
+  if (cBest[2] > 0)
+    keep(
+      "cst",
+      cBest[2],
+      bd(cBest[0]) + " a " + bd(cBest[1]),
+      "constância",
+      () =>
+        `<p class="sub">${bd(cBest[0])} a ${bd(cBest[1])} · pelo menos 15 min por dia</p>`,
+    );
   keep("tot", tot, "", "tempo total acumulado", totD);
   {
     const rk = (a, f) => {
@@ -2186,6 +2218,12 @@ function records(q) {
         ]),
         UF.pol,
       ),
+      cst: rk(
+        cRuns
+          .filter((r) => r[2] > 0)
+          .map(([a, b, c]) => [`${bd(a)} a ${bd(b)}`, c]),
+        UF.cst,
+      ),
       iron: rk(
         Object.entries(hr).flatMap(([h, set]) =>
           runsOf([...set])
@@ -2255,7 +2293,7 @@ function records(q) {
   $("#dlBody").style.setProperty("--c", "var(--flame)");
   $("#dlBody").innerHTML =
     `<div class="row"><h2 style="margin:0">🏆 Recordes</h2><button class="ghost" data-a="close">Fechar</button></div>
- <div><h3>Destaques</h3><div class="tro">${C(R.gstreak.v + " dias", `Streak geral · ${R.gstreak.l}`, "gstreak")}${C(R.streak.v + " dias", `Maior streak por matéria · ${esc(R.streak.l)}`, "streak")}${C(hh(R.day.v), `Maratona · ${R.day.l}`, "day")}${R.focus ? C(hh(R.focus.v), `Foco absoluto (bloco contínuo) · ${R.focus.l}`, "focus") : ""}${C(hh(R.week.v) + "/dia", `Maior média semanal · sem. de ${R.week.l}`, "week")}${C(hh(R.month.v) + "/dia", `Maior média mensal · ${R.month.l}`, "month")}${C(esc(fav[1]), `Matéria favorita · ${hh(fav[0])}`)}${C(R.pol.v + " matérias", `Polímata · ${R.pol.l}`, "pol")}${R.iron ? C(R.iron.v + " dias", `Hábito de ferro · por volta das ${R.iron.l}`, "iron") : ""}</div></div>
+ <div><h3>Destaques</h3><div class="tro">${C(R.gstreak.v + " dias", `Streak geral · ${R.gstreak.l}`, "gstreak")}${C(R.streak.v + " dias", `Maior streak por matéria · ${esc(R.streak.l)}`, "streak")}${C(hh(R.day.v), `Maratona · ${R.day.l}`, "day")}${R.focus ? C(hh(R.focus.v), `Foco absoluto (bloco contínuo) · ${R.focus.l}`, "focus") : ""}${C(hh(R.week.v) + "/dia", `Maior média semanal · sem. de ${R.week.l}`, "week")}${C(hh(R.month.v) + "/dia", `Maior média mensal · ${R.month.l}`, "month")}${C(esc(fav[1]), `Matéria favorita · ${hh(fav[0])}`)}${C(R.pol.v + " matérias", `Polímata · ${R.pol.l}`, "pol")}${R.cst ? C(R.cst.v + " dias", `Constância (15 min/dia) · ${R.cst.l}`, "cst") : ""}${R.iron ? C(R.iron.v + " dias", `Hábito de ferro · por volta das ${R.iron.l}`, "iron") : ""}</div></div>
  <div><h3>Estatísticas gerais</h3><div class="tro">${C(hh(R.tot.v), "Tempo total acumulado", "tot")}${C(hh(tot / ks.length), "Média por dia estudado")}${C(ks.length, "Dias estudados")}${C(ev.length, "Blocos registrados")}${ev.length ? C(hh(evm / ev.length), "Bloco médio") : ""}${C(G.length - pz.length, "Matéria-dias sem pausa (1 bloco)")}${C(pz.length, "Matéria-dias com pausas")}${C(hh(gap), "Tempo total em pausas")}${C(early.size + " / " + night.size, "Dias madrugador / coruja")}${C(fw, "Fins de semana produtivos")}${C(tp, "Tópicos concluídos")}</div></div>
  <div><h3>Estatísticas anuais</h3><div class="tro">${C(hh(R.yh.v), `Ano mais estudado · ${R.yh.l}`, "yh")}${C(R.yd.v + " dias", `Ano com mais dias estudados · ${R.yd.l}`, "yd")}${C(hh(R.ya.v) + "/dia", `Maior média diária do ano · ${R.ya.l}`, "ya")}${R.ys ? C(R.ys.v + " dias", `Maior streak num ano · ${R.ys.l}`, "ys") : ""}${R.ym ? C(hh(R.ym.v), `Matéria do ano · ${R.ym.l}`, "ym") : ""}${R.yb ? C(hh(R.yb.v), `Melhor mês de um ano · ${R.yb.l}`, "yb") : ""}${R.yk ? C(R.yk.v + " blocos", `Ano com mais blocos · ${R.yk.l}`, "yk") : ""}</div>
  <h3>Comparativo ano a ano</h3>${ul(

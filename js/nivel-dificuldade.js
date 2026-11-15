@@ -184,15 +184,20 @@
     return { cur, best: Math.max(best, cur), hoje: Math.round(stkTot(t)) };
   }
   function cstShow() {
-    const c = $("#lzb"),
-      o = $("#cst");
-    if (o) o.remove();
-    if (!c) return;
-    const i = cstInfo();
-    c.insertAdjacentHTML(
-      "beforeend",
-      `<div id="cst" class="tbadge" style="margin-top:4px;font-size:.78em;opacity:.85">🌱 Constância ${i.cur} dia${i.cur === 1 ? "" : "s"} · recorde ${i.best} · ${i.hoje >= CST_MIN ? "hoje ✓" : "hoje " + i.hoje + "/" + CST_MIN + " min"}</div>`,
-    );
+    const g = $("#gst"),
+      old = $("#cst");
+    if (old) old.remove();
+    if (!g) return;
+    const i = cstInfo(),
+      dd = (n) => n + (n === 1 ? " dia" : " dias");
+    let e = $("#cst2");
+    if (!e) {
+      e = document.createElement("div");
+      e.id = "cst2";
+      g.insertAdjacentElement("afterend", e);
+    }
+    e.className = "gst" + (i.cur > 0 ? " hot" : "");
+    e.innerHTML = `<i>🌱</i><span>${dd(i.cur)} de constância</span><small>recorde: ${dd(i.best)} · ${i.hoje >= CST_MIN ? "hoje ✓" : "hoje " + i.hoje + "/" + CST_MIN + " min"}</small>`;
   }
   const _ic = idChip;
   idChip = function () {
