@@ -293,9 +293,9 @@ function topicCard(s) {
   if (!T.length) return "";
   const p = T.filter((x) => !x.done);
   if (!p.length)
-    return `<div class='nt'>✅ Todos os ${T.length} tópicos concluídos</div>`;
+    return `<div class='ntb'>✅ Todos os ${T.length} tópicos concluídos</div>`;
   const n = p.slice().sort(tsort)[0];
-  return `<div class='nt'>📚 ${T.length - p.length} de ${T.length} tópicos · próximo: <b>${esc(n.name)}</b>${n.date ? " (" + br(n.date) + ")" : ""}</div>`;
+  return `<div class='ntb'>📚 ${T.length - p.length} de ${T.length} tópicos · próximo: <b>${esc(n.name)}</b>${n.date ? " (" + br(n.date) + ")" : ""}</div>`;
 }
 /* ===== Subtarefas (x.subs) dentro de cada tarefa ===== */
 function subsBlock(s, x) {

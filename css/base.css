@@ -31,13 +31,13 @@ h1{font-size:clamp(2.2rem,6vw,3.6rem);line-height:1;margin:0;font-weight:800;let
 .gform input[type=number]{width:64px}
 .goal .gm{margin-top:8px}
 .card{cursor:pointer;transition:border-color .2s}.card:hover{border-color:var(--c)}
-.nt{font-size:.88rem;color:var(--muted);background:var(--bg);border-radius:12px;padding:8px 12px}
-.nt b{color:var(--ink)}
+.ntb{font-size:.88rem;color:var(--muted);background:var(--bg);border-radius:12px;padding:8px 12px}
+.ntb b{color:var(--ink)}
 .pane{display:none;flex-direction:column;gap:18px}.pane.on{display:flex}
 .tabs,.seg{display:flex;gap:4px;background:var(--bg);padding:4px;border-radius:14px}
 .tabs button,.seg button{flex:1;border:0;background:none;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:500;color:var(--muted)}
 .tabs button.on,.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18)}
-.tform{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tform{display:flex;flex-wrap:wrap;gap:8px;align-items:center;align-content:flex-start}
 .tform .btn{align-self:center;flex:0 0 auto;height:auto;min-height:0;width:auto}
 .tform input[type=text]{flex:1 1 220px;min-width:0}
 .tform input,.tform select,.td,.pr,.tp textarea{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;color:var(--ink)}
@@ -84,7 +84,7 @@ h1{font-size:clamp(2.2rem,6vw,3.6rem);line-height:1;margin:0;font-weight:800;let
 .srow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--bg);border-radius:12px;padding:8px 12px}
 .srow .sd{flex:1}
 .srow input{width:76px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px;color:var(--ink);text-align:center}
-.tform input[type=checkbox]{padding:0;width:auto}
+.tform input[type=checkbox]{padding:0;width:18px;height:18px;min-width:18px;margin:0;accent-color:var(--accent,#ec4899)}
 .sw{display:flex;gap:6px;flex-wrap:wrap}
 .sw input{display:none}
 .sw span{display:block;width:26px;height:26px;border-radius:50%;background:var(--c);cursor:pointer;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
