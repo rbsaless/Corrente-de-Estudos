@@ -384,7 +384,7 @@ function topicsBlock(s) {
       })
       .join("") ||
     `<p class='sub'>${T.length ? "Nada neste filtro." : "Nenhum tópico ainda. Liste o que precisa estudar e dê um dia para cada um."}</p>`;
-  return `<div class='tform' style='align-content:flex-start;align-items:center;flex:none;height:auto;min-height:0'><input type='text' id='nt-n' placeholder='Novo tópico (ex.: Present Perfect)' maxlength='80' aria-label='Nome do tópico'><input type='date' id='nt-d' aria-label='Dia planejado'><select id='nt-p' aria-label='Prioridade'><option value='alta'>Alta</option><option value='media' selected>Média</option><option value='baixa'>Baixa</option></select><input type='number' id='nt-e' min='0' max='600' placeholder='min' aria-label='Minutos estimados'><label class='sub' style='display:inline-flex;align-items:center;gap:6px;margin:0;height:auto;min-height:0;align-self:center'><input type='checkbox' id='nt-x' style='width:18px;height:18px;min-width:18px;padding:0;margin:0'> 📝 Prova</label><button class='btn main' style='align-self:center;height:auto;min-height:0;flex:0 0 auto;padding:8px 14px' data-a='tadd' data-id='${s.id}'>Adicionar</button></div>
+  return `<div class='tform' style='align-content:flex-start;align-items:center;flex:none;height:auto;min-height:0'><input type='text' id='nt-n' placeholder='Novo tópico (ex.: Present Perfect)' maxlength='80' aria-label='Nome do tópico'><input type='date' id='nt-d' aria-label='Dia planejado'><select id='nt-p' aria-label='Prioridade'><option value='alta'>Alta</option><option value='media' selected>Média</option><option value='baixa'>Baixa</option></select><input type='number' id='nt-e' min='0' max='600' placeholder='min' aria-label='Minutos estimados'><label class='sub' style='display:inline-flex;align-items:center;gap:6px;margin:0;height:auto;min-height:0;align-self:center'><input type='checkbox' id='nt-ex' style='width:18px;height:18px;min-width:18px;padding:0;margin:0'> 📝 Prova</label><button class='btn main' style='align-self:center;height:auto;min-height:0;flex:0 0 auto;padding:8px 14px' data-a='tadd' data-id='${s.id}'>Adicionar</button></div>
  ${
    T.length
      ? `<div class='goal'><p><span><b>${dn} de ${T.length} tópicos concluídos</b></span><span>${left ? "~" + lt + " restantes" : ""}</span></p><div class='bar'><div style='width:${(dn / T.length) * 100}%'></div></div></div>
@@ -838,7 +838,7 @@ document.addEventListener("click", (e) => {
       $("#nt-n").focus();
       return;
     }
-    const ex = $("#nt-x").checked;
+    const ex = $("#nt-ex").checked;
     if (ex && !$("#nt-d").value) {
       toast("Escolha o dia da prova.");
       return;
