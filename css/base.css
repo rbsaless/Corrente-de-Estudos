@@ -37,7 +37,8 @@ h1{font-size:clamp(2.2rem,6vw,3.6rem);line-height:1;margin:0;font-weight:800;let
 .tabs,.seg{display:flex;gap:4px;background:var(--bg);padding:4px;border-radius:14px}
 .tabs button,.seg button{flex:1;border:0;background:none;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:500;color:var(--muted)}
 .tabs button.on,.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.18)}
-.tform{display:flex;flex-wrap:wrap;gap:8px}
+.tform{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tform .btn{align-self:center;flex:0 0 auto;height:auto;min-height:0;width:auto}
 .tform input[type=text]{flex:1 1 220px;min-width:0}
 .tform input,.tform select,.td,.pr,.tp textarea{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;color:var(--ink)}
 .tform input[type=number]{width:84px}
