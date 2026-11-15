@@ -9,7 +9,7 @@ function taskRow(s, x, withDate) {
 }
 function dayTop() {
   const t = fmt(now()),
-    D = allTasks()
+    D = allTasksV()
       .filter((o) => o.x.date === calSel)
       .sort(taskCmp),
     dn = D.filter((o) => o.x.done).length;
@@ -162,7 +162,7 @@ function renderHomeTasks() {
     return;
   }
   const t = fmt(now());
-  const L = allTasks()
+  const L = allTasksV()
     .filter(
       (o) =>
         !o.s.arch &&
@@ -798,6 +798,13 @@ document.addEventListener("click", (e) => {
     }
     renderCal();
   } else if (a === "ctog") {
+    const sf = subFind(s, b.dataset.tid);
+    if (sf) {
+      sf.y.done = !sf.y.done;
+      save();
+      render();
+      return;
+    }
     const x = (s.topics || []).find((y) => y.id === b.dataset.tid);
     if (!x) return;
     setDone(s, x, !x.done);
