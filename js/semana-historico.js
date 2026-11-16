@@ -36,7 +36,7 @@ const allTasksV = () => {
               done: !!y.done,
               prio: x.prio,
               est: 0,
-              time: "",
+              time: y.time || "",
               note: "",
               sub: true,
               pid: x.id,
@@ -55,10 +55,14 @@ const subFind = (s, id) => {
   return null;
 };
 const findTask = (sid, tid) => {
-  const s = S.subjects.find((a) => a.id === sid),
-    x = s && (s.topics || []).find((y) => y.id === tid);
-  return x ? { s, x } : null;
+  const s = S.subjects.find((a) => a.id === sid);
+  if (!s) return null;
+  const x = (s.topics || []).find((y) => y.id === tid);
+  if (x) return { s, x };
+  const f = subFind(s, tid);
+  return f ? { s, x: f.y, parent: f.x, sub: true } : null;
 };
+
 function viewSeg() {
   return `<div class='seg' role='group' aria-label='Tipo de visão'><button class='${calV === "month" ? "on" : ""}' data-a='cview' data-v='month'>Mensal</button><button class='${calV === "week" ? "on" : ""}' data-a='cview' data-v='week'>Semanal</button></div>`;
 }
@@ -308,7 +312,7 @@ function colAt(x, y) {
 function dragStart(e) {
   if ((calV !== "week" && calV !== "month") || e.button > 0) return;
   if (e.target.closest(".wk-chk")) return;
-  const src = e.target.closest(".wk-ev,.wk-chip,.wk-tc,.mc");
+  const src = e.target.closest(".wk-ev,.wk-chip,.wk-tc,.mc,.gc-chip");
   if (!src) return;
   const o = findTask(src.dataset.sid, src.dataset.tid);
   if (!o) return;
@@ -356,7 +360,9 @@ function beginDrag() {
     const g = document.createElement("div");
     g.className = "wk-gh";
     g.style.cssText = `--c:${d.o.s.color};width:${Math.min(d.w, 180)}px`;
-    g.textContent = d.o.x.name;
+    g.textContent = d.o.sub
+      ? `↳ ${d.o.x.name} · ${d.o.parent.name}`
+      : d.o.x.name;
     document.body.appendChild(g);
     d.gh = g;
   }

@@ -1004,12 +1004,26 @@ $("#file").onchange = (e) => {
   r.readAsText(f);
   e.target.value = "";
 };
+(() => {
+  const savedTheme = localStorage.getItem("corrente_theme");
+  if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+})();
+
 $("#theme").onclick = () => {
   const r = document.documentElement,
-    dark = r.dataset.theme
-      ? r.dataset.theme === "dark"
-      : matchMedia("(prefers-color-scheme:dark)").matches;
-  r.dataset.theme = dark ? "light" : "dark";
+    cur =
+      r.dataset.theme ||
+      (matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light"),
+    order = ["light", "dark", "gcal"],
+    names = {
+      light: "☀️ Tema Claro",
+      dark: "🌙 Tema Escuro",
+      gcal: "🖤 Preto Calendário",
+    },
+    nxt = order[(order.indexOf(cur) + 1) % order.length];
+  r.dataset.theme = nxt;
+  localStorage.setItem("corrente_theme", nxt);
+  toast(names[nxt]);
 };
 document.addEventListener("change", (e) => {
   const el = e.target,
@@ -2309,3 +2323,115 @@ function records(q) {
  <div><h3>Galeria de conquistas</h3>${gal}</div>`;
   if (!$("#dlg").open) $("#dlg").showModal();
 }
+/* ----- Pop-up de Nova Tarefa ao dar duplo clique no dia (Visão Mensal) ----- */
+function openQuickTaskModal(dateStr) {
+  const A = S.subjects.filter((s) => !s.arch);
+  if (!A.length) {
+    toast("Adicione uma matéria ativa primeiro.");
+    return;
+  }
+  const cs = A.some((s) => s.id === calSub) ? calSub : A[0].id;
+  const labelDia = parse(dateStr).toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+
+  $("#sBody").style.setProperty("--c", "var(--flame)");
+  $("#sBody").innerHTML = `
+    <div class="row">
+      <h2 style="margin:0;font-size:1.25rem">➕ Nova tarefa</h2>
+      <button class="ghost" type="button" onclick="$('#sdlg').close()">✕</button>
+    </div>
+    <p class="sub" style="margin:4px 0 12px">📅 ${labelDia}</p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <label>Matéria
+        <select id="qt-modal-sub">${A.map((s) => `<option value="${s.id}"${s.id === cs ? " selected" : ""}>${esc(s.name)}</option>`).join("")}</select>
+      </label>
+      <label>Nome da tarefa
+        <input type="text" id="qt-modal-name" maxlength="80" placeholder="Ex.: Resolver lista de exercícios">
+      </label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <label style="flex:1;min-width:110px">Horário (opcional)
+          <input type="time" id="qt-modal-time">
+        </label>
+        <label style="flex:1;min-width:100px">Tempo (min)
+          <input type="number" id="qt-modal-est" min="0" max="600" placeholder="min">
+        </label>
+        <label style="flex:1;min-width:110px">Prioridade
+          <select id="qt-modal-prio">
+            <option value="alta">Alta</option>
+            <option value="media" selected>Média</option>
+            <option value="baixa">Baixa</option>
+          </select>
+        </label>
+      </div>
+      <label style="flex-direction:row;align-items:center;gap:8px;font-size:.9rem;cursor:pointer">
+        <input type="checkbox" id="qt-modal-exam" style="width:auto"> 📝 Marcar como Prova
+      </label>
+      <div class="row" style="margin-top:6px">
+        <button class="btn" type="button" onclick="$('#sdlg').close()">Cancelar</button>
+        <button class="btn main" type="button" id="qt-modal-save">Salvar tarefa</button>
+      </div>
+    </div>
+  `;
+
+  $("#sdlg").showModal();
+  const inp = $("#qt-modal-name");
+  setTimeout(() => inp && inp.focus(), 50);
+
+  const salvar = () => {
+    const n = inp.value.trim();
+    if (!n) {
+      toast("Digite o nome da tarefa.");
+      inp.focus();
+      return;
+    }
+    const sid = $("#qt-modal-sub").value;
+    const subj = S.subjects.find((x) => x.id === sid);
+    if (!subj) return;
+
+    calSub = sid;
+    const isExam = $("#qt-modal-exam").checked;
+    (subj.topics = subj.topics || []).push({
+      id: "t" + Date.now().toString(36),
+      name: n,
+      date: dateStr,
+      time: $("#qt-modal-time").value || "",
+      prio: isExam ? "alta" : $("#qt-modal-prio").value,
+      est: Math.max(0, parseInt($("#qt-modal-est").value) || 0),
+      done: false,
+      doneAt: "",
+      note: "",
+      exam: isExam || undefined,
+    });
+
+    save();
+    $("#sdlg").close();
+    render();
+    toast(`Tarefa adicionada em ${subj.name} (${br(dateStr)}).`);
+  };
+
+  $("#qt-modal-save").onclick = salvar;
+  inp.onkeydown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      salvar();
+    }
+  };
+}
+
+let _lastDayClick = { k: "", t: 0 };
+document.addEventListener("click", (e) => {
+  const cell = e.target.closest('[data-a="cday"]');
+  if (!cell) return;
+  if (e.target.closest(".mc, button, input, select")) return;
+  const k = cell.dataset.k;
+  const nowMs = Date.now();
+  if (_lastDayClick.k === k && nowMs - _lastDayClick.t < 450) {
+    _lastDayClick = { k: "", t: 0 };
+    openQuickTaskModal(k);
+  } else {
+    _lastDayClick = { k, t: nowMs };
+  }
+});
