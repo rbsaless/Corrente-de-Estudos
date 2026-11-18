@@ -939,6 +939,118 @@ function ddSessDay(s, k) {
   });
   return { tot, unp };
 }
+/* ===== Editar / apagar bloco de estudo (usado pela tela "Feitas do dia" e pelo modal do calendário) ===== */
+function sessDelete(s, q) {
+  const a0 = new Date(q[0]),
+    b0 = new Date(q[1]),
+    dur = Math.round((b0 - a0) / 6e4),
+    r = lzRefundSess(s, q),
+    unp = !!q[2];
+  s.du = s.du || {};
+  sessParts(a0, b0).forEach(([d, m]) => {
+    s.days[d] = Math.max(0, (s.days[d] || 0) - Math.round(m));
+    if (unp) s.du[d] = Math.max(0, (s.du[d] || 0) - Math.round(m));
+  });
+  Object.keys(s.days).forEach((d) => {
+    if (!(s.days[d] > 0)) delete s.days[d];
+  });
+  Object.keys(s.du).forEach((d) => {
+    if (!(d in s.days) || s.du[d] > s.days[d]) s.du[d] = s.days[d] || 0;
+    if (!s.du[d]) delete s.du[d];
+  });
+  s.sessions = s.sessions.filter((x) => x !== q);
+  const L = (S.log || []).filter(
+    (x) => x.sid === s.id && x.d === fmt(a0) && x.h === a0.getHours(),
+  );
+  if (L.length) {
+    const g = L.reduce((p, x) =>
+      Math.abs(x.m - dur) < Math.abs(p.m - dur) ? x : p,
+    );
+    S.log = S.log.filter((x) => x !== g);
+  }
+  return r;
+}
+/* o = { date:'AAAA-MM-DD', time:'HH:MM', dur:min, log?:{w,f} }. Retorna { err } ou { na, nb }.
+   Se o.log vier, também atualiza (ou cria) a anotação "O que estudei" / concentração do bloco. */
+function sessEdit(s, q, o) {
+  const ma = +new Date(q[0]),
+    mb = +new Date(q[1]),
+    a0 = new Date(ma),
+    b0 = new Date(mb),
+    dur = Math.round(+o.dur);
+  if (!o.time || !o.date || !(dur >= 1 && dur <= 1440))
+    return { err: "Informe data, início e duração válidos (1 a 1440 min)." };
+  const na = new Date(o.date + "T" + o.time + ":00"),
+    nb = new Date(+na + dur * 6e4);
+  if (isNaN(na) || nb > new Date())
+    return {
+      err: "Esse bloco terminaria no futuro. Ajuste o início ou a duração.",
+    };
+  const oldDur = Math.round((mb - ma) / 6e4),
+    changed = dur !== oldDur || fmt(na) !== fmt(a0),
+    rf = changed ? lzRefundSess(s, q) : null,
+    oldP = sessParts(a0, b0),
+    newP = sessParts(na, nb),
+    unp = !!q[2];
+  s.du = s.du || {};
+  oldP.forEach(([d, m]) => {
+    s.days[d] = Math.max(0, (s.days[d] || 0) - Math.round(m));
+    if (unp) s.du[d] = Math.max(0, (s.du[d] || 0) - Math.round(m));
+  });
+  newP.forEach(([d, m]) => {
+    s.days[d] = (s.days[d] || 0) + Math.round(m);
+    if (unp) s.du[d] = (s.du[d] || 0) + Math.round(m);
+  });
+  oldP.forEach(([d]) => {
+    if (!(s.days[d] > 0) && !newP.some((p) => p[0] === d)) {
+      delete s.days[d];
+      if (s.du) delete s.du[d];
+    }
+  });
+  Object.keys(s.du).forEach((d) => {
+    if (!(d in s.days) || s.du[d] > s.days[d]) s.du[d] = s.days[d] || 0;
+    if (!s.du[d]) delete s.du[d];
+  });
+  const L = (S.log || []).filter(
+      (x) => x.sid === s.id && x.d === fmt(a0) && x.h === a0.getHours(),
+    ),
+    g = L.length
+      ? L.reduce((p, x) =>
+          Math.abs(x.m - oldDur) < Math.abs(p.m - oldDur) ? x : p,
+        )
+      : null;
+  if (g && (L.length === 1 || o.log)) {
+    g.d = fmt(na);
+    g.h = na.getHours();
+    g.m = dur;
+    if (g.xb > 0) g.xb = xbCalc(dur);
+  }
+  if (o.log) {
+    const w = (o.log.w || "").trim().slice(0, 120),
+      f = +o.log.f || 0;
+    if (g) {
+      g.w = w;
+      g.f = f;
+    } else if (w || f) {
+      const lg = addLog(s, fmt(na), dur, String(na.getHours()), w, f);
+      if (lg) {
+        if (unp) lg.u = 1;
+        else lg.xb = xbCalc(dur);
+      }
+    }
+  }
+  q[0] = iso(na);
+  q[1] = iso(nb);
+  if (rf && !unp && impAt(s, fmt(na)) !== 0) {
+    const nid = q[3]
+        ? lzGain(s, dur, "timer")
+        : lzGainD(s, dur, "manual", fmt(na), true),
+      ne = nid && lzCfg().led.find((x) => x.id === nid);
+    if (ne && q[3]) q[3] = ne.t;
+    if (nid && rf.bonus) lzBonus(nid);
+  }
+  return { na, nb };
+}
 function renderDD() {
   const el = $("#dd");
   if (!el || curPage !== "relatorio" || rTab !== "hist") return;
@@ -1072,30 +1184,7 @@ document.addEventListener("click", (e) => {
       )
     )
       return;
-    const r = lzRefundSess(s, q),
-      unp = !!q[2];
-    s.du = s.du || {};
-    sessParts(a0, b0).forEach(([d, m]) => {
-      s.days[d] = Math.max(0, (s.days[d] || 0) - Math.round(m));
-      if (unp) s.du[d] = Math.max(0, (s.du[d] || 0) - Math.round(m));
-    });
-    Object.keys(s.days).forEach((d) => {
-      if (!(s.days[d] > 0)) delete s.days[d];
-    });
-    Object.keys(s.du).forEach((d) => {
-      if (!(d in s.days) || s.du[d] > s.days[d]) s.du[d] = s.days[d] || 0;
-      if (!s.du[d]) delete s.du[d];
-    });
-    s.sessions = s.sessions.filter((x) => x !== q);
-    const L = (S.log || []).filter(
-      (x) => x.sid === s.id && x.d === fmt(a0) && x.h === a0.getHours(),
-    );
-    if (L.length) {
-      const g = L.reduce((p, x) =>
-        Math.abs(x.m - dur) < Math.abs(p.m - dur) ? x : p,
-      );
-      S.log = S.log.filter((x) => x !== g);
-    }
+    const r = sessDelete(s, q);
     save();
     render();
     toast(
@@ -1211,57 +1300,13 @@ document.addEventListener("change", (e) => {
       render();
       return;
     }
-    const na = new Date(fmt(a0) + "T" + hhmm + ":00"),
-      nb = new Date(+na + dur * 6e4);
-    if (isNaN(na) || nb > new Date()) {
-      toast("Esse bloco terminaria no futuro. Ajuste o início ou a duração.");
+    const res = sessEdit(s, q, { date: fmt(a0), time: hhmm, dur });
+    if (res.err) {
+      toast(res.err);
       render();
       return;
     }
-    const oldDur = Math.round((mb - ma) / 6e4),
-      rf = dur !== oldDur ? lzRefundSess(s, q) : null,
-      oldP = sessParts(a0, b0),
-      newP = sessParts(na, nb),
-      unp = !!q[2];
-    s.du = s.du || {};
-    oldP.forEach(([d, m]) => {
-      s.days[d] = Math.max(0, (s.days[d] || 0) - Math.round(m));
-      if (unp) s.du[d] = Math.max(0, (s.du[d] || 0) - Math.round(m));
-    });
-    newP.forEach(([d, m]) => {
-      s.days[d] = (s.days[d] || 0) + Math.round(m);
-      if (unp) s.du[d] = (s.du[d] || 0) + Math.round(m);
-    });
-    oldP.forEach(([d]) => {
-      if (!(s.days[d] > 0) && !newP.some((p) => p[0] === d)) {
-        delete s.days[d];
-        if (s.du) delete s.du[d];
-      }
-    });
-    Object.keys(s.du).forEach((d) => {
-      if (!(d in s.days) || s.du[d] > s.days[d]) s.du[d] = s.days[d] || 0;
-      if (!s.du[d]) delete s.du[d];
-    });
-    const L = (S.log || []).filter(
-      (x) => x.sid === s.id && x.d === fmt(a0) && x.h === a0.getHours(),
-    );
-    if (L.length === 1) {
-      const x = L[0];
-      x.d = fmt(na);
-      x.h = na.getHours();
-      x.m = dur;
-      if (x.xb > 0) x.xb = xbCalc(dur);
-    }
-    q[0] = iso(na);
-    q[1] = iso(nb);
-    if (rf && !unp && impAt(s, fmt(na)) !== 0) {
-      const nid = q[3]
-          ? lzGain(s, dur, "timer")
-          : lzGainD(s, dur, "manual", fmt(na), true),
-        ne = nid && lzCfg().led.find((x) => x.id === nid);
-      if (ne && q[3]) q[3] = ne.t;
-      if (nid && rf.bonus) lzBonus(nid);
-    }
+    const na = res.na;
     save();
     render();
     toast(

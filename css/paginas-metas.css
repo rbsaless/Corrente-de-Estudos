@@ -95,3 +95,4 @@
 .gform select,.mgf select{max-width:100%}
 @media (max-width:640px){.lvb{width:52px;height:52px}.exg{grid-template-columns:1fr}}
 
+#sdlg input[type=date],#sdlg input[type=time],#sdlg input[type=number],#sdlg select{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--ink);width:100%;min-height:42px}

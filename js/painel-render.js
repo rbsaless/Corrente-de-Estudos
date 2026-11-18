@@ -242,6 +242,10 @@ function studyDetail(sid, k, i) {
         (x) => x.sid === sid && x.d === fmt(z.oa) && x.h === z.oa.getHours(),
       );
     ttl = "⏱ Estudo realizado";
+    const sx0 = (s.sessions || []).find(
+      (q) => +new Date(q[0]) === +z.oa && +new Date(q[1]) === +z.ob,
+    );
+    const seAt = `data-sid='${sid}' data-ma='${+z.oa}' data-mb='${+z.ob}' data-k='${k}' data-i='${i}'`;
     body = `<p class='sub' style='margin:0'>${esc(s.name)} · ${bd(fmt(z.oa))} · ${hm(z.oa)}–${hm(z.ob)} · ${hh(m)}</p><h3>O que estudei</h3>${L.length ? ul(L.map(lgLine)) : `<p class='sub' style='margin:0'>Sem anotação do que foi estudado nesta sessão.</p>`}${(() => {
       const sx = (s.sessions || []).find(
         (q) => +new Date(q[0]) === +z.oa && +new Date(q[1]) === +z.ob,
@@ -251,7 +255,7 @@ function studyDetail(sid, k, i) {
       if (sx && sx[2])
         return `<p class='sub' style='margin:8px 0 0'>🚫 Sessão não planejada.</p>`;
       return `<p class='sub' style='margin:8px 0 0;font-size:.85rem'>Se foi um estudo fora do plano, você pode marcar. É definitivo: não dá para voltar a planejada.</p><button class='btn' data-mku='${sid}' data-ma='${+z.oa}' data-mb='${+z.ob}'>🚫 Marcar como não planejada</button>`;
-    })()}`;
+    })()}${sx0 ? `<div class='row' style='gap:8px;justify-content:flex-start'><button class='btn' data-se='edit' ${seAt}>✏️ Editar</button><button class='btn ghost danger' data-se='del' ${seAt}>🗑 Apagar</button></div>` : ""}`;
   }
   $("#sBody").style.setProperty("--c", s.color);
   $("#sBody").innerHTML =
