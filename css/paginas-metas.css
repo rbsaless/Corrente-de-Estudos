@@ -128,3 +128,27 @@ button.rx-d:hover{filter:brightness(1.08);outline:2px solid var(--flame);outline
 .rx-leg small{font-size:.74rem;color:var(--muted)}
 .rx-leg .rx-d{width:12px;height:12px;border-radius:3px}
 @media (max-width:640px){.rx-d.big{min-height:40px}.rx-d.big small{font-size:.56rem}}
+
+/* ===== Aba Projeção ===== */
+.pj-band{position:relative;height:16px;background:var(--track);border-radius:8px;margin:14px 0 4px}
+.pj-band i{position:absolute;top:0;bottom:0}
+.pj-rng{background:var(--flame);opacity:.22;border-radius:8px}
+.pj-fill{left:0;background:var(--flame);border-radius:8px 0 0 8px;opacity:.9}
+.pj-mk{width:3px;margin-left:-1px;background:var(--ink);top:-3px!important;bottom:-3px!important;border-radius:2px}
+.pj-ref{width:0;border-left:2px dotted #e0a31b;top:-4px!important;bottom:-4px!important}
+.pj-frz{width:3px;margin-left:-1px;background:#a06be9;top:-3px!important;bottom:-3px!important;border-radius:2px}
+.pj-row{display:grid;grid-template-columns:1.1fr 1.3fr .9fr 1.4fr;gap:8px;align-items:center;width:100%;text-align:left;background:var(--bg);border:0;border-radius:12px;padding:9px 12px;margin:5px 0;font:inherit;color:var(--ink);cursor:pointer}
+.pj-row:hover{outline:2px solid var(--flame)}
+.pj-row small{color:var(--muted)}
+.pj-d{font-weight:700}
+.pj-s{color:var(--muted);font-size:.85rem;text-align:right}
+@media (max-width:640px){.pj-row{grid-template-columns:1fr 1fr;row-gap:2px}.pj-s{text-align:left}}
+.pj-vd{display:flex;flex-direction:column;gap:3px;border-left:4px solid;background:var(--bg);border-radius:12px;padding:10px 14px;margin:8px 0}
+.pj-vd b{font-size:1.05rem}
+.pj-vd span{color:var(--muted);font-size:.88rem;line-height:1.45}
+.pj-tb{width:100%;border-collapse:collapse;font-size:.85rem;min-width:420px}
+.pj-tb th{text-align:left;font-weight:600;color:var(--muted);font-size:.76rem;padding:5px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.pj-tb td{padding:6px 8px;border-bottom:1px dashed var(--line)}
+.pj-tb tr.on td{background:var(--bg);font-weight:700}
+.pj-tb td.sub{font-weight:400;font-size:.8rem}
+.seg button{white-space:nowrap}
