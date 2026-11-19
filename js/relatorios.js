@@ -1705,7 +1705,10 @@ function rdPer(d) {
 }
 function repDeep(d) {
   try {
-    return d.v === "day" ? rdDay(d) : d.v === "week" ? rdWeek(d) : rdPer(d);
+    return (
+      (d.v === "day" ? rdDay(d) : d.v === "week" ? rdWeek(d) : rdPer(d)) +
+      (typeof rxExtras === "function" ? rxExtras(d) : "")
+    );
   } catch (e) {
     console.error("repDeep", e);
     return "";
@@ -1843,6 +1846,14 @@ document.addEventListener("click", (e) => {
     }
     rTab = n;
     render();
+  } else if (a === "rpgoday") {
+    const k = b.dataset.k;
+    rV = "day";
+    rOff = Math.round((parse(k) - parse(fmt(new Date()))) / 864e5);
+    renderRep();
+    const top = document.getElementById("rp");
+    if (top && top.scrollIntoView)
+      top.scrollIntoView({ behavior: "smooth", block: "start" });
   } else if (a === "rptype") {
     rV = b.dataset.v;
     rOff = rV === "week" ? -1 : 0;
