@@ -3,6 +3,10 @@
   const $$ = (x) => document.getElementById(x);
   let tab = "bank",
     per = "7",
+    sIdx = 0,
+    tlim = 7,
+    per0 = 1,
+    tab0 = 0,
     cat = "all",
     dFrom = "",
     dTo = "",
@@ -14,6 +18,7 @@
 #lzst .g4{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}#lzst .k{background:var(--bg);border-radius:16px;padding:12px 14px}#lzst .k small{display:block;color:var(--muted);font-size:.78rem}#lzst .k b{font:800 1.35rem "Bricolage Grotesque","DM Sans",sans-serif}#lzst .k b.p{color:#00a878}#lzst .k b.n{color:#e5484d}#lzst .k b.v{color:#7c5cff}#lzst .k b.a{color:#3b82f6}#lzst .k b.o{color:#f59e0b}
 #lzst .sc{max-height:540px;overflow:auto;border:1px solid var(--line);border-radius:14px;margin-top:10px}#lzst table{width:100%;border-collapse:collapse;font-size:.88rem}#lzst th{position:sticky;top:0;background:var(--surface);text-align:left;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line)}#lzst td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}#lzst td.r,#lzst th.r{text-align:right;white-space:nowrap}#lzst td small{display:block;color:var(--muted)}#lzst .p{color:#00a878}#lzst .n{color:#e5484d}
 #lzst .bd{display:inline-block;padding:2px 8px;border-radius:99px;font-size:.74rem;font-weight:700;color:#fff;white-space:nowrap}#lzst .rw{display:grid;grid-template-columns:170px 1fr 90px;gap:8px;align-items:center;margin:6px 0;font-size:.86rem}#lzst .rb{height:10px;background:var(--track);border-radius:99px;overflow:hidden}#lzst .rb i{display:block;height:100%;border-radius:99px}#lzst .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}#lzst .ok{color:#00a878;font-weight:700}#lzst .rk{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:.88rem}#lzst .rk small{display:block;color:var(--muted)}`;
+  css.textContent += `#lzst .tl{margin:8px 0;border:1px solid var(--line);border-radius:14px;padding:4px 12px;background:var(--surface)}#lzst .tl>summary{cursor:pointer;padding:8px 0;font-weight:700;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}#lzst .tl>summary small{font-weight:400;color:var(--muted)}#lzst .tbar{position:relative;height:24px;border-radius:8px;background:var(--track);overflow:hidden;margin:4px 0 2px}#lzst .tbar i{position:absolute;top:0;bottom:0;min-width:2px}#lzst .tax{display:flex;justify-content:space-between;font-size:.7rem;color:var(--muted);margin-bottom:8px}#lzst .sg{display:grid;grid-template-columns:104px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:.86rem}#lzst .sg small{display:block;color:var(--muted)}#lzst .sg .ed{display:flex;gap:4px;align-items:center;flex-wrap:wrap}#lzst .sg input[type=time]{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:4px;color:var(--ink);min-height:32px}#lzst .sg .btn{padding:5px 9px;min-height:32px;font-size:.78rem}#lzst .y{background:var(--bg);border-radius:16px;padding:12px 14px;margin:10px 0}#lzst .y h3{margin:0 0 6px}#lzst details.dd{margin:10px 0;border:1px solid var(--line);border-radius:14px;padding:4px 12px}#lzst details.dd>summary{cursor:pointer;font-weight:700;padding:8px 0}@media(max-width:560px){#lzst .sg{grid-template-columns:1fr}}`;
   document.head.appendChild(css);
   const CATS = {
     ganho: ["Conquistado", "#00a878"],
@@ -68,6 +73,10 @@
     if (per === "month") {
       const d = new Date();
       return [new Date(d.getFullYear(), d.getMonth(), 1).getTime(), end];
+    }
+    if (per === "streak") {
+      const w = stkWins()[sIdx] || stkWins()[0];
+      return [parseD(w.from), nextD(parseD(w.to)) - 1];
     }
     if (per === "custom") {
       const a = parseD(dFrom),
@@ -368,6 +377,370 @@
       z = lzCfg();
     return { all, a, b, P, F, S0, z };
   }
+
+  /* ===== V93: janelas de streak, linha do tempo e informações do dia ===== */
+  const hm = (t) => {
+    const q = new Date(t);
+    return p2(q.getHours()) + ":" + p2(q.getMinutes());
+  };
+  const dur = (m) => {
+    m = Math.round(m);
+    return m >= 60
+      ? Math.floor(m / 60) + "h" + (m % 60 ? p2(m % 60) : "")
+      : m + " min";
+  };
+  const brK = (k) => k.slice(8) + "/" + k.slice(5, 7) + "/" + k.slice(0, 4);
+  const WD = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+  function resetDays() {
+    const led = lzCfg().led,
+      out = new Set();
+    led.forEach((x) => {
+      const m =
+        /^Reset de −10h: saldo de lazer zerado \(o dia (\d\d)\/(\d\d) terminou/.exec(
+          x.note || "",
+        );
+      if (!m) return;
+      const tag = "o dia " + m[1] + "/" + m[2] + " terminou";
+      if (
+        led.some((y) =>
+          (y.note || "").includes("Reset de −10h desfeito: " + tag),
+        )
+      )
+        return;
+      let y = new Date(x.t).getFullYear();
+      if (new Date(y, +m[2] - 1, +m[1]).getTime() > x.t + DAY) y--;
+      out.add(y + "-" + m[2] + "-" + m[1]);
+    });
+    const z = stkCfg().zeroAt;
+    if (z) out.add(z);
+    return [...out].sort();
+  }
+  function stkWins() {
+    const R = resetDays(),
+      led = lzCfg().led,
+      first = led.length
+        ? dkey(Math.min(...led.map((x) => x.t)))
+        : dkey(Date.now()),
+      today = dkey(Date.now()),
+      W = [];
+    const nx = (k) => dkey(nextD(parseD(k)) + DAY / 2),
+      pv = (k) => dkey(parseD(k) - DAY / 2);
+    let from = first;
+    const B = R.map((r) => ({ r }));
+    B.forEach((b, i) => {
+      const to = pv(b.r);
+      if (to >= from) W.push({ from, to, end: b.r });
+      from = nx(b.r);
+    });
+    W.push({ from: from > today ? today : from, to: today, end: null, cur: 1 });
+    W.reverse();
+    W.forEach((w, i) => {
+      w.label =
+        (w.cur ? "Streak atual · " : "Streak anterior · ") +
+        brK(w.from) +
+        " → " +
+        (w.cur ? "hoje" : brK(w.to)) +
+        (w.end ? " (terminou no reset de −10h de " + brK(w.end) + ")" : "");
+    });
+    return W;
+  }
+  function dayEnd(k) {
+    const t = dkey(Date.now());
+    if (k === t) return lzBal();
+    const b = stkCfg().bal[k];
+    if (b !== undefined) return b;
+    const e = nextD(parseD(k)) - 1;
+    let r = null;
+    build().forEach((x) => {
+      if (x.t <= e) r = x.run;
+    });
+    return r == null ? 0 : r;
+  }
+  function daySegs(k) {
+    const d0 = parseD(k),
+      d1 = Math.min(nextD(d0), Date.now()),
+      L = [],
+      id = idCfg();
+    const add = (a, b, ty, x) => {
+      a = Math.max(a, d0);
+      b = Math.min(b, d1);
+      if (b - a >= 3e4) L.push({ a, b, ty, ...x });
+    };
+    (id.log || []).forEach((x) =>
+      add(x.a, x.b, "id", { lz: x.lz, xp: x.xp, r: x.r }),
+    );
+    S.subjects.forEach((s) =>
+      (s.sessions || []).forEach((q) => {
+        if (!q[2])
+          add(+new Date(q[0]), +new Date(q[1]), "st", {
+            nm: s.name || s.n || "",
+          });
+      }),
+    );
+    if (S.timer && !S.timer.unp)
+      add(S.timer.start, Date.now(), "st", { nm: "em andamento" });
+    lzCfg().led.forEach((x) => {
+      if (x.type === "use" && x.min < 0)
+        add(x.t + x.min * 6e4, x.t, "uz", { lz: -x.min, note: x.note });
+    });
+    L.sort((a, b) => a.a - b.a);
+    const out = [];
+    let c = d0;
+    L.forEach((x) => {
+      if (x.b <= c) return;
+      if (x.a < c) x.a = c;
+      if (x.a > c) out.push({ a: c, b: x.a, ty: "pz" });
+      out.push(x);
+      c = x.b;
+    });
+    if (c < d1) out.push({ a: c, b: d1, ty: "pz" });
+    const merged = [];
+    out.forEach((x) => {
+      const l = merged[merged.length - 1];
+      if (
+        l &&
+        l.ty === x.ty &&
+        (x.ty === "pz" || x.ty === "id") &&
+        l.b === x.a
+      ) {
+        l.b = x.b;
+        l.lz = (l.lz || 0) + (x.lz || 0);
+        l.xp = (l.xp || 0) + (x.xp || 0);
+      } else merged.push(x);
+    });
+    return merged;
+  }
+  const TY = {
+    st: ["Estudo", "#00a878"],
+    id: ["Ocioso (cobrado)", "#e5484d"],
+    pz: ["Pausa / ocupado / sem cobrança", "#8b8aa8"],
+    uz: ["Lazer usado", "#3b82f6"],
+  };
+  function dayInfo(k) {
+    const z = stkCfg(),
+      m = stkMin(k),
+      tot = Math.round(stkTot(k)),
+      be = dayEnd(k),
+      segs = daySegs(k),
+      R = resetDays();
+    const idl = segs
+        .filter((x) => x.ty === "id")
+        .reduce((a, x) => a + (x.b - x.a) / 6e4, 0),
+      idlz = segs
+        .filter((x) => x.ty === "id")
+        .reduce((a, x) => a + (x.lz || 0), 0);
+    const gained = build()
+      .filter((r) => dkey(r.t) === k && (r.c === "ganho" || r.c === "bonus"))
+      .reduce((a, r) => a + r.m, 0);
+    const hit = k === dkey(Date.now()) ? "" : "";
+    const below = be < -600,
+      minOk = tot >= m && tot > 0,
+      wiped = R.includes(k);
+    let st, cl;
+    if (k === dkey(Date.now())) {
+      st = below
+        ? "⚠ Hoje já está abaixo de −10h: se terminar assim, o lazer zera"
+        : "Em andamento";
+      cl = below ? "n" : "";
+    } else if (wiped) {
+      st =
+        "💥 Terminou abaixo de −10h: lazer zerado" +
+        (minOk ? "" : " (e sem o mínimo de foco)");
+      cl = "n";
+    } else if (below) {
+      st = "⚠ Terminou abaixo de −10h (reset evitado)";
+      cl = "o";
+    } else {
+      st = minOk ? "✔ Streak cumprida" : "Mínimo de foco não atingido";
+      cl = minOk ? "p" : "n";
+    }
+    return {
+      k,
+      m,
+      tot,
+      be,
+      segs,
+      idl,
+      idlz,
+      gained,
+      st,
+      cl,
+      minOk,
+      below,
+      wiped,
+    };
+  }
+  function dayCard(i, open) {
+    const k = i.k,
+      d = parseD(k),
+      d0 = d,
+      seg = i.segs,
+      d1 = Math.min(nextD(d0), Date.now()),
+      span = nextD(d0) - d0,
+      canEd = d1 > Date.now() - 7 * DAY;
+    const bar =
+      '<div class="tbar">' +
+      seg
+        .map(
+          (x) =>
+            `<i style="left:${((x.a - d0) / span) * 100}%;width:${((x.b - x.a) / span) * 100}%;background:${TY[x.ty][1]}" title="${TY[x.ty][0]} ${hm(x.a)}–${hm(x.b)}"></i>`,
+        )
+        .join("") +
+      '</div><div class="tax"><span>00h</span><span>06h</span><span>12h</span><span>18h</span><span>24h</span></div>';
+    const rows =
+      seg
+        .map((x, j) => {
+          const m = (x.b - x.a) / 6e4,
+            t = TY[x.ty];
+          let inf = "",
+            ed = "";
+          if (x.ty === "st") inf = esc(x.nm || "");
+          if (x.ty === "id") {
+            inf =
+              "−" +
+              lzN(x.lz || 0) +
+              (x.xp > 0 ? " · −" + Math.round(x.xp) + " XP" : "") +
+              (x.r ? " · cobrança retroativa" : "");
+            if (canEd)
+              ed = `<div class="ed"><input type="time" id="tla-${k}-${j}" value="${hm(x.a)}"><input type="time" id="tlb-${k}-${j}" value="${x.b >= nextD(d0) - 6e4 ? "23:59" : hm(x.b)}"><button class="btn" type="button" data-lzs="tl-fix" data-k="${k}" data-j="${j}">↩ Devolver (não era ocioso)</button></div>`;
+          }
+          if (x.ty === "pz") {
+            inf = "sem cobrança de ociosidade";
+            if (canEd && idCfg().on)
+              ed = `<div class="ed"><input type="time" id="tla-${k}-${j}" value="${hm(x.a)}"><input type="time" id="tlb-${k}-${j}" value="${x.b >= nextD(d0) - 6e4 ? "23:59" : hm(x.b)}"><button class="btn" type="button" data-lzs="tl-chg" data-k="${k}" data-j="${j}">🔻 Cobrar como ocioso</button></div>`;
+          }
+          if (x.ty === "uz") inf = "−" + lzN(x.lz) + " " + esc(x.note || "");
+          return `<div class="sg"><span><b style="color:${t[1]}">●</b> ${hm(x.a)}–${hm(x.b)}</span><span>${t[0]} · <b>${dur(m)}</b><small>${inf}</small></span><span>${ed}</span></div>`;
+        })
+        .join("") || '<p class="sub">Sem registros neste dia.</p>';
+    return `<details class="tl"${open ? " open" : ""}><summary>${brK(k)} <small>${WD[new Date(d).getDay()]}</small><span class="bd" style="background:${i.cl === "p" ? "#00a878" : i.cl === "n" ? "#e5484d" : i.cl === "o" ? "#f59e0b" : "#8b8aa8"}">${i.st}</span><small>lazer no fim: <b class="${i.be < 0 ? "n" : "p"}">${lzS(i.be)}</b> · estudo ${dur(i.tot)}/${dur(i.m)} · ocioso ${dur(i.idl)}</small></summary>${bar}${rows}${canEd ? "" : '<p class="sub">Edição liberada só para os últimos 7 dias.</p>'}</details>`;
+  }
+  function tlAct(a, btn) {
+    const k = btn.dataset.k,
+      j = +btn.dataset.j,
+      seg = daySegs(k)[j];
+    if (!seg) return;
+    const d0 = parseD(k),
+      tm = (id, end) => {
+        const v = ($$(id) || {}).value;
+        if (!/^\d\d:\d\d$/.test(v)) return null;
+        const [h, m] = v.split(":").map(Number);
+        return new Date(d0.valueOf()).setHours(
+          h,
+          m + (end && v === "23:59" ? 1 : 0),
+          0,
+          0,
+        );
+      };
+    let x = tm("tla-" + k + "-" + j),
+      y = tm("tlb-" + k + "-" + j);
+    if (x == null || y == null || !(x < y)) {
+      toast("Horário inválido: o início precisa ser antes do fim.");
+      return;
+    }
+    x = Math.max(x, seg.a);
+    y = Math.min(y, seg.b);
+    const n = Date.now();
+    if (!(x < y) || y > n || x < n - 7 * DAY) {
+      toast(
+        "Use um trecho dentro deste bloco, nos últimos 7 dias e já passado.",
+      );
+      return;
+    }
+    if (a === "tl-fix") {
+      let rl = 0;
+      idCfg().log.forEach((q) => {
+        const s0 = Math.max(x, q.a),
+          e0 = Math.min(y, q.b);
+        if (e0 > s0) rl += (q.lz * (e0 - s0)) / (q.b - q.a);
+      });
+      if (
+        !confirm(
+          "Devolver " +
+            lzN(rl) +
+            " de lazer (e o XP) do trecho " +
+            hm(x) +
+            "–" +
+            hm(y) +
+            " de " +
+            brK(k) +
+            "?\n\nSe com isso o dia deixar de terminar abaixo de −10h, o reset é desfeito e a streak volta.",
+        )
+      )
+        return;
+      const r = idFix(x, y);
+      toast(
+        r.rl > 0
+          ? "Devolvido: +" +
+              lzN(r.rl) +
+              " de lazer e +" +
+              Math.round(r.rx) +
+              " XP."
+          : "Nada cobrado neste trecho.",
+      );
+    } else {
+      const P = idRetro(x, y, "", false);
+      if (
+        !confirm(
+          "Cobrar " +
+            lzN(P.lz) +
+            " de lazer" +
+            (P.xp > 0 ? " e " + Math.round(P.xp) + " XP" : "") +
+            " do trecho " +
+            hm(x) +
+            "–" +
+            hm(y) +
+            " de " +
+            brK(k) +
+            "?" +
+            idImpTxt(P.imp),
+        )
+      )
+        return;
+      const r = idRetro(x, y, "editado na linha do tempo", true);
+      toast("Cobrado: −" + lzN(r.lz) + " de lazer.");
+    }
+    save();
+    render();
+  }
+  function stkSel() {
+    const W = stkWins();
+    return `<label>Qual streak<select id="lzs-stk">${W.map((w, i) => `<option value="${i}"${i === sIdx ? " selected" : ""}>${esc(w.label)}</option>`).join("")}</select></label>`;
+  }
+  function topCards() {
+    const t = dkey(Date.now()),
+      y = dkey(Date.now() - DAY),
+      I = dayInfo(y),
+      T = dayInfo(t),
+      sk = stkWins()[0],
+      nd = Math.round((parseD(t) - parseD(sk.from)) / DAY) + 1;
+    const c = (h, i, lab) =>
+      `<div class="y"><h3>${h}</h3><p class="sub" style="margin:0 0 8px"><span class="${i.cl}" style="font-weight:700">${i.st}</span></p><div class="g4" style="margin:0"><div class="k"><small>Lazer ${lab}</small><b class="${i.be < 0 ? "n" : "p"}">${i.be < 0 ? "−" : ""}${lzN(i.be)}</b><small>limite de reset: −10h</small></div><div class="k"><small>Estudo / mínimo</small><b class="${i.minOk ? "p" : "n"}">${dur(i.tot)} / ${dur(i.m)}</b></div><div class="k"><small>Lazer ganho</small><b class="p">+${lzN(i.gained)}</b></div><div class="k"><small>Perdido por ociosidade</small><b class="n">−${lzN(i.idlz)}</b><small>${dur(i.idl)} ocioso</small></div></div></div>`;
+    return `<div class="cols">${c("🌙 Como terminou ontem (" + brK(y) + ")", I, "ao fim do dia")}${c("☀️ Hoje (até agora)", T, "agora")}</div><p class="sub" style="margin:4px 0 0">🔥 Streak atual: <b>${nd} dia${nd > 1 ? "s" : ""}</b> desde ${brK(sk.from)}. Se um dia terminar abaixo de −10h, o saldo negativo, a dívida e os Elos zeram (e a streak também, se o dia não bateu o mínimo de foco).</p>`;
+  }
+  function timeline(a, b) {
+    const t = dkey(Date.now());
+    let ks = [];
+    for (
+      let q = parseD(dkey(Math.min(b, Date.now())));
+      q >= a && ks.length < 400;
+      q = parseD(dkey(q - DAY / 2))
+    )
+      ks.push(dkey(q));
+    const first = lzCfg().led.length
+      ? dkey(Math.min(...lzCfg().led.map((x) => x.t)))
+      : t;
+    ks = ks.filter((k) => k >= first);
+    const sh = ks.slice(0, tlim);
+    return (
+      `<h3 style="margin:14px 0 4px">⏱ Linha do tempo (dia a dia, minuto a minuto)</h3><p class="sub" style="margin:0 0 6px"><b style="color:#00a878">●</b> estudo · <b style="color:#e5484d">●</b> ocioso (cobrado) · <b style="color:#8b8aa8">●</b> pausa/ocupado/sem cobrança · <b style="color:#3b82f6">●</b> lazer usado. Mude o horário de um bloco e use os botões para <b>devolver</b> ou <b>cobrar</b>; tudo atualiza saldo, XP, streak e o app inteiro. Edição: últimos 7 dias.</p>` +
+      sh.map((k, i) => dayCard(dayInfo(k), i === 0)).join("") +
+      (ks.length > tlim
+        ? `<button class="btn" type="button" data-lzs="tmore">Mostrar mais dias (${ks.length - tlim})</button>`
+        : "")
+    );
+  }
+
   function renderStats() {
     const el = $$("lzst");
     if (!el || tab !== "st" || curPage !== "lazer") return;
@@ -428,13 +801,14 @@
             : `<tr><td>${dt(y.t)}</td><td><span class="bd" style="background:#e5484d">Falha${y.pn ? " nº " + y.pn : ""}</span>${y.ref ? " <small>↩ estornada (Correção retroativa)</small>" : ""}${y.tst ? " <small>🧪 teste (punição real aplicada)</small>" : ""}${y.late ? " <small>enquanto você estava fora</small>" : ""}</td><td class="r n">−${lzN(y.lz)} de lazer${y.xp > 0 ? " · −" + y.xp + " XP" : y.xp == null ? " · XP não registrado" : ""}</td></tr>`,
       )
       .join("");
-    el.innerHTML = `<div class="mgs"><h2>📊 Extrato do lazer</h2><p class="sub" style="margin:0">Somente leitura: tudo aqui vem do mesmo registro do banco, então sempre bate com o saldo. Para ajustar taxas, empréstimos ou descansos, use a aba Banco.</p>
+    el.innerHTML = `<div class="mgs"><h2>📊 Extrato do lazer</h2><p class="sub" style="margin:0 0 8px">Tudo vem do mesmo registro do banco e bate com o saldo. Os ajustes de ociosidade feitos aqui valem para o app inteiro.</p>${topCards()}
  <div class="fl"><label>Período<select id="lzs-per">${[
    ["all", "Tudo"],
    ["today", "Hoje"],
    ["7", "Últimos 7 dias"],
    ["30", "Últimos 30 dias"],
    ["month", "Este mês"],
+   ["streak", "Por streak (entre resets de −10h)"],
    ["custom", "Personalizado"],
  ]
    .map(
@@ -442,7 +816,7 @@
        `<option value="${v}"${per === v ? " selected" : ""}>${n}</option>`,
    )
    .join("")}</select></label>
- ${per === "custom" ? `<label>De<input type="date" id="lzs-from" value="${esc(dFrom)}"></label><label>Até<input type="date" id="lzs-to" value="${esc(dTo)}"></label>` : ""}
+ ${per === "streak" ? stkSel() : ""}${per === "custom" ? `<label>De<input type="date" id="lzs-from" value="${esc(dFrom)}"></label><label>Até<input type="date" id="lzs-to" value="${esc(dTo)}"></label>` : ""}
  <label>Categoria<select id="lzs-cat">${[
    ["all", "Todas"],
    ["ganho", "Conquistados"],
@@ -463,7 +837,7 @@
  <div class="k"><small>Descansos (líquido)</small><b class="a">−${lzN(Math.max(0, S0.desc))}</b></div>${S0.rst > 0 ? `<div class="k"><small>Perdão do reset de −10h</small><b class="o">+${lzN(S0.rst)}</b></div>` : ""}
  <div class="k"><small>Dívida de estudo (gerada / paga)</small><b>${lzN(S0.dg)} / ${lzN(S0.dp)}</b></div><div class="k"><small>Variação no período</small><b class="${S0.net < 0 ? "n" : "p"}">${lzS(Math.round(S0.net * 100) / 100)}</b></div></div>
  <p class="sub" style="margin:0 0 6px">${per === "all" ? (ok ? '<span class="ok">✔ Conferência:</span> a soma de todas as linhas é igual ao saldo do banco.' : "⚠ A soma das linhas difere do saldo atual do banco.") : "Conferência com o saldo só aparece no período “Tudo”."}${deb > 0 ? ` Dívida em aberto agora: <b>${lzN(deb)}</b> de estudo.` : ""} Tickets de descanso entram só no cálculo líquido de descansos.</p>
- <div class="sc"><table><thead><tr><th>Data e hora</th><th>Categoria</th><th>Descrição</th><th class="r">Valor</th><th class="r">Saldo após</th></tr></thead><tbody>
+ ${timeline(a, b)}<details class="dd"><summary>📋 Todos os lançamentos do período (tabela)</summary><div class="sc"><table><thead><tr><th>Data e hora</th><th>Categoria</th><th>Descrição</th><th class="r">Valor</th><th class="r">Saldo após</th></tr></thead><tbody>
  ${
    F.slice()
      .reverse()
@@ -475,15 +849,15 @@
      .join("") ||
    '<tr><td colspan="5"><span class="sub">Nenhum lançamento neste filtro.</span></td></tr>'
  }
- </tbody></table></div>${F.length > lim ? `<button class="btn" style="margin-top:10px" data-lzs="more" type="button">Mostrar mais (${F.length - lim} restantes)</button>` : ""}<p class="sub" style="margin:8px 0 0">${F.length} lançamento${F.length === 1 ? "" : "s"} neste filtro.</p></div>
- <div class="mgs"><h2>📈 Análises do período</h2>${chart(P, a, b)}
+ </tbody></table></div>${F.length > lim ? `<button class="btn" style="margin-top:10px" data-lzs="more" type="button">Mostrar mais (${F.length - lim} restantes)</button>` : ""}<p class="sub" style="margin:8px 0 0">${F.length} lançamento${F.length === 1 ? "" : "s"} neste filtro.</p></details></div>
+ <div class="mgs"><h2>📈 Resumo do período</h2><p class="sub" style="margin:0">${per === "streak" ? esc((stkWins()[sIdx] || stkWins()[0]).label) : "Do período selecionado acima."}</p>${chart(P, a, b)}
  <div class="cols" style="margin-top:14px"><div><h3 style="margin-top:0">De onde vem o tempo</h3>${bars(gm, "#00a878")}</div><div><h3 style="margin-top:0">Para onde ele vai (perdas)</h3>${bars(lm, "#e5484d")}</div></div>
  <div class="g4"><div class="k"><small>Média diária líquida</small><b class="${S0.net < 0 ? "n" : "p"}">${lzS(Math.round((S0.net / ndays) * 10) / 10)}</b></div>
  <div class="k"><small>Melhor dia</small><b class="p">${best ? lzS(Math.round(dm[best] * 10) / 10) : "—"}</b><small>${best ? fmtK(best) : ""}</small></div>
  <div class="k"><small>Pior dia</small><b class="n">${worst ? lzS(Math.round(dm[worst] * 10) / 10) : "—"}</b><small>${worst ? fmtK(worst) : ""}</small></div>
  <div class="k"><small>Dias seguidos no positivo</small><b>${sk.cur}</b><small>recorde: ${sk.best}</small></div></div>
  <div class="cols"><div><h3>🏆 Maiores ganhos</h3>${rk(top, 0)}</div><div><h3>💥 Maiores perdas</h3>${rk(low, 1)}</div></div></div>
- <div class="mgs"><h2>☢️ Terminal Dharma (Lost)</h2><p class="sub" style="margin:0">Visão só de leitura. Para ativar, desativar ou digitar o código, use o Terminal.</p>
+ <div class="mgs"><details class="dd" style="border:0;padding:0"><summary style="font-size:1.2rem">☢️ Terminal Dharma (Lost)</summary><p class="sub" style="margin:0">Visão só de leitura. Para ativar, desativar ou digitar o código, use o Terminal.</p>
  <div class="g4"><div class="k"><small>Situação</small><b>${l.on ? "Ativo" : "Desativado"}</b><small>${l.on && l.end ? "ciclo termina " + dt(l.end) : ""}</small></div>
  <div class="k"><small>Códigos aceitos</small><b class="p">${D.okR}</b><small>${D.okTest ? D.okTest + " em testes não contam" : ""}</small></div>
  <div class="k"><small>Falhas</small><b class="n">${D.failR}</b><small>${D.failTest ? D.failTest + " em testes não contam" : ""}</small></div>
@@ -496,7 +870,7 @@
  <div class="k"><small>No período: falhas / lazer perdido</small><b>${dPF.length} / −${lzN(dPF.reduce((s, y) => s + y.lz, 0))}</b></div></div>
  <h3>Histórico de ciclos</h3><div class="sc"><table><thead><tr><th>Data e hora</th><th>Resultado</th><th class="r">Impacto</th></tr></thead><tbody>${evRows || '<tr><td colspan="3"><span class="sub">Nenhum ciclo registrado ainda.</span></td></tr>'}</tbody></table></div>
  ${D.ev.length > dlim ? `<button class="btn" style="margin-top:10px" data-lzs="dmore" type="button">Mostrar mais ciclos (${D.ev.length - dlim} restantes)</button>` : ""}
- <p class="sub" style="margin:8px 0 0">As falhas antigas foram reconstruídas do extrato do lazer (data, lazer perdido e número da punição). ${D.undated ? `Existem <b>${D.undated}</b> código${D.undated > 1 ? "s" : ""} aceito${D.undated > 1 ? "s" : ""} de antes desta atualização, contado${D.undated > 1 ? "s" : ""} nos totais mas sem data. ` : ""}Ciclos que venceram com o app fechado contam desde que zeraram; os que caíram em período sem cobrança de ociosidade aparecem como isentos, e falhas dentro de uma Correção retroativa aparecem como estornadas. A partir de agora, cada código e cada falha são registrados com data, lazer e XP. Ciclos de teste ficam marcados e não entram na taxa de acerto, mas a punição de uma falha em teste é real e aparece no extrato.</p></div>`;
+ <p class="sub" style="margin:8px 0 0">As falhas antigas foram reconstruídas do extrato do lazer (data, lazer perdido e número da punição). ${D.undated ? `Existem <b>${D.undated}</b> código${D.undated > 1 ? "s" : ""} aceito${D.undated > 1 ? "s" : ""} de antes desta atualização, contado${D.undated > 1 ? "s" : ""} nos totais mas sem data. ` : ""}Ciclos que venceram com o app fechado contam desde que zeraram; os que caíram em período sem cobrança de ociosidade aparecem como isentos, e falhas dentro de uma Correção retroativa aparecem como estornadas. A partir de agora, cada código e cada falha são registrados com data, lazer e XP. Ciclos de teste ficam marcados e não entram na taxa de acerto, mas a punição de uma falha em teste é real e aparece no extrato.</p></details></div>`;
   }
   function csv() {
     const { F } = view(),
@@ -600,12 +974,22 @@
     } else if (a === "dmore") {
       dlim += 20;
       renderStats();
-    } else if (a === "csv") csv();
+    } else if (a === "tmore") {
+      tlim += 7;
+      renderStats();
+    } else if (a === "tl-fix" || a === "tl-chg") tlAct(a, b);
+    else if (a === "csv") csv();
     else if (a === "print") prn();
   });
   document.addEventListener("change", (e) => {
     const id = e.target.id;
-    if (id === "lzs-per") {
+    if (id === "lzs-stk") {
+      sIdx = +e.target.value;
+      lim = 100;
+      tlim = 7;
+      renderStats();
+    } else if (id === "lzs-per") {
+      tlim = 7;
       per = e.target.value;
       lim = 100;
       renderStats();
@@ -633,5 +1017,17 @@
       }
       return r;
     })(renderLazer);
-  window.__lzst = { cls, build, sum, dharma, view, renderStats, setTab, csv };
+  window.__lzst = {
+    stkWins,
+    daySegs,
+    dayInfo,
+    cls,
+    build,
+    sum,
+    dharma,
+    view,
+    renderStats,
+    setTab,
+    csv,
+  };
 })();
