@@ -1293,7 +1293,7 @@ function stkRetro(days, apply, tot) {
 }
 /* Inverso do stkRetro: depois de DEVOLVER lazer de dias passados, reajusta o saldo de fim de dia (k.bal) e,
    se um dia que tinha causado o reset de −10h passa a terminar acima de −10h, desfaz o reset (devolve a streak
-   e a dívida de lazer/estudo). Elos não são devolvidos (o valor anterior não é guardado). */
+   e a dívida de lazer/estudo). Elos voltam só em resets feitos depois desta atualização (o saldo anterior passa a ser guardado em k.elw). */
 function stkBack(days) {
   const k = stkCfg(),
     t = fmt(now()),
@@ -1335,6 +1335,10 @@ function stkBack(days) {
         const p = pw.find((x) => Math.abs(x.t - w.t) < 3000);
         if (p) led.splice(led.indexOf(p), 1);
       }
+      if (k.elw[d] > 0) {
+        elCfg().s = Math.max(0, elCfg().s - k.elw[d]);
+        delete k.elw[d];
+      }
       if (k.zeroAt === d) k.zeroAt = "";
       undone.push(d);
     } else if (w || k.zeroAt === d) carry = 0;
@@ -1343,7 +1347,7 @@ function stkBack(days) {
     toast(
       "🔥 Correção devolveu o dia " +
         undone.map(br).join(", ") +
-        ": reset de −10h desfeito e streak restaurada.",
+        ": reset de −10h desfeito, streak e Elos restaurados (Elos só se o reset foi registrado após esta atualização).",
     );
   return undone;
 }
@@ -1417,6 +1421,7 @@ function stkCfg() {
   k.fz = Array.isArray(k.fz) ? k.fz : [];
   k.sv = Array.isArray(k.sv) ? k.sv : [];
   k.bal = k.bal || {};
+  k.elw = k.elw && typeof k.elw === "object" ? k.elw : {};
   k.zeroAt = k.zeroAt || "";
   return k;
 }
@@ -1481,6 +1486,7 @@ function stkWipe(d, sk) {
         br(d) +
         " terminou abaixo de −10h)",
     });
+  if (e.g - e.s > 0) stkCfg().elw[d] = e.g - e.s;
   e.s = e.g;
   toast(
     "💥 " +
