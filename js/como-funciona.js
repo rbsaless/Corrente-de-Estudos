@@ -145,7 +145,7 @@
       D(
         "💾 Dados e backup",
         U([
-          "Tudo fica salvo no navegador. Use <b>Exportar backup</b> e <b>Importar backup</b> para guardar ou mover os dados.",
+          "Tudo fica salvo no navegador. Use <b>Salvar</b> (baixa o backup e, se configurado em <b>☁ Nuvem</b>, guarda também no seu Google Drive) e <b>Importar backup</b> para guardar ou mover os dados.",
           "A chave da Lumi IA não entra no backup.",
         ]),
       )
